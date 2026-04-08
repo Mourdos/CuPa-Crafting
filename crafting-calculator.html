@@ -59,6 +59,12 @@ main{flex:1;display:flex;gap:0;overflow:hidden}
 
 .empty-state{color:#556;font-size:1.1rem;margin-top:60px;text-align:center}
 
+.search-result{padding:6px 10px;cursor:pointer;font-size:.85rem;border-bottom:1px solid #1a1a2e}
+.search-result:hover,.search-result.active{background:#0f3460}
+.search-result .sr-name{color:#e0e0e0}
+.search-result .sr-cat{color:#667;font-size:.75rem;margin-left:8px}
+#txtSearch:focus{outline:none;border-color:#e94560}
+
 @media(max-width:800px){
   main{flex-direction:column}
   .summary-panel{width:100%;border-left:none;border-top:2px solid #0f3460}
@@ -69,6 +75,11 @@ main{flex:1;display:flex;gap:0;overflow:hidden}
 <header>
   <h1>CuPa Crafting Calculator</h1>
   <div class="controls">
+    <div class="control-group" style="position:relative">
+      <label>Search</label>
+      <input type="text" id="txtSearch" placeholder="Type to search..." autocomplete="off" style="background:#0f3460;border:1px solid #334466;color:#e0e0e0;padding:6px 10px;border-radius:4px;font-size:.9rem;width:200px">
+      <div id="searchResults" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:#16213e;border:1px solid #334466;border-radius:4px;max-height:300px;overflow:auto;width:320px;margin-top:2px"></div>
+    </div>
     <div class="control-group">
       <label>Type</label>
       <select id="selType"></select>
@@ -149,6 +160,26 @@ const RARITY = {
   // Alchemy
   'Blood':'C','Essence':'U',
   'Chymos':'U','Cruor':'U','Ichor':'U',
+  // Specific essences (one rarity step above C herb = U)
+  'Essence of Agaric':'U','Essence of Amaranth':'U','Essence of Fireweed':'U',
+  'Essence of Cayenne':'U','Essence of Lotus Leaves':'U','Essence of Yellow Fungus':'U',
+  // Specific herbs (all C)
+  'Abscess Root':'C','Acacia':'C','Acorn':'C','Agaric':'C','Agrimony':'C',
+  'Amaranth':'C','Belladonna':'C','Benne':'C','Beth Root':'C',
+  'Black Horehound':'C','Black Mushroom Powder':'C','Box Leaves':'C',
+  'Cayenne':'C','Chokeweed':'C','Colewort':'C','Comfrey':'C',
+  'Cumin Seeds':'C','Digitalis':'C','Fenugreek':'C','Fireweed':'C',
+  'Gelsemium':'C','Gentian':'C','Hawthorn':'C','Hemlock':'C',
+  'Hyssop':'C','Jambul Seeds':'C','Lotus Leaves':'C','Lucerne':'C',
+  'Lycopodium':'C','Marjoram':'C','Master Wort':'C','Mistletoe':'C',
+  'Moonflower Seeds':'C','Muira Puama':'C','Nux Vomica':'C',
+  'Oidium Sano':'C','Rosemary':'C','Scarlet Radish':'C','Scopolia':'C',
+  'Skullcap':'C','Spider Venom':'C','Spikenard':'C','Stag Horn':'C',
+  'Sweet Geranium':'C','Viper Venom':'C','White Bryony':'C',
+  'Yellow Fungus':'C',
+  // Specific gems (all U)
+  'Blue Agate':'U','Crimson Quartz':'U','Green Agate':'U','Navy Quartz':'U',
+  'Red Agate':'U','Sage Quartz':'U',
   // Surgery
   'Claw':'C','Bandage':'C',
 };
@@ -207,6 +238,12 @@ const MAT = {
   'Tin Wire':    {i:{'Tin Metal':1,'Charcoal':1}, y:3, wu:3},
   // Alchemy
   'Essence':     {i:{'Herb (any)':3,'Oil':1}, y:1, wu:1},
+  'Essence of Agaric':      {i:{'Agaric':3,'Oil':1}, y:1, wu:1},
+  'Essence of Amaranth':    {i:{'Amaranth':3,'Oil':1}, y:1, wu:1},
+  'Essence of Fireweed':    {i:{'Fireweed':3,'Oil':1}, y:1, wu:1},
+  'Essence of Cayenne':     {i:{'Cayenne':3,'Oil':1}, y:1, wu:1},
+  'Essence of Lotus Leaves':{i:{'Lotus Leaves':3,'Oil':1}, y:1, wu:1},
+  'Essence of Yellow Fungus':{i:{'Yellow Fungus':3,'Oil':1}, y:1, wu:1},
   'Chymos':      {i:{'Blood':1}, y:1, wu:1},
   'Cruor':       {i:{'Blood':1}, y:1, wu:1},
   'Ichor':       {i:{'Blood':1}, y:1, wu:1},
@@ -522,11 +559,65 @@ add('Wire','Nickel Wire',{i:{'Nickel Metal':1,'Charcoal':1},wu:3,y:3,size:'s'});
 add('Wire','Tin Wire',{i:{'Tin Metal':1,'Charcoal':1},wu:3,y:3,size:'s'});
 
 // --- ALCHEMY ---
-add('Alchemy','Essence',{i:{'Herb (any)':3,'Oil':1},wu:1,size:'s'});
-add('Alchemy','Chymos (wasteful)',{i:{'Blood':1},wu:1,size:'s'});
-add('Alchemy','Cruor (wasteful)',{i:{'Blood':1},wu:1,size:'s'});
-add('Alchemy','Ichor (wasteful)',{i:{'Blood':1},wu:1,size:'s'});
-add('Alchemy','All 3 Humours (efficient)',{i:{'Blood':1},wu:4,y:1,size:'s'});
+add('Essences & Humours','Essence',{i:{'Herb (any)':3,'Oil':1},wu:1,size:'s'});
+add('Essences & Humours','Chymos (wasteful)',{i:{'Blood':1},wu:1,size:'s'});
+add('Essences & Humours','Cruor (wasteful)',{i:{'Blood':1},wu:1,size:'s'});
+add('Essences & Humours','Ichor (wasteful)',{i:{'Blood':1},wu:1,size:'s'});
+add('Essences & Humours','All 3 Humours (efficient)',{i:{'Blood':1},wu:4,y:1,size:'s'});
+
+// --- ALCHEMY: POTIONS (ENHANCING) ---
+add('Potions - Enhancing','Berserkergang',{i:{'Cumin Seeds':1,'Moonflower Seeds':1,'Oil':3},wu:4,size:'s'});
+add('Potions - Enhancing','Blessed Release',{i:{'Agrimony':1,'Master Wort':1,'Oil':3},wu:4,size:'s'});
+add('Potions - Enhancing','Copper Skin',{i:{'Black Horehound':1,'Colewort':1,'Lucerne':1,'Oil':3},wu:6,size:'s'});
+add('Potions - Enhancing','Philtre of Visions',{i:{'Chokeweed':1,'Lotus Leaves':1,'Oil':3},wu:6,size:'s'});
+add('Potions - Enhancing','Potion of Constitution',{i:{'Acorn':1,'Muira Puama':1,'Oil':3},wu:4,size:'s'});
+add('Potions - Enhancing','Potion of Fortitude',{i:{'Hawthorn':1,'Mistletoe':1,'Oil':3},wu:5,size:'s'});
+add('Potions - Enhancing','Potion of Glibness',{i:{'Gelsemium':1,'Scarlet Radish':1,'Fluid':3},wu:5,size:'s'});
+
+// --- ALCHEMY: POTIONS (HEALING) ---
+add('Potions - Healing','Emesia',{i:{'Lucerne':1,'Nux Vomica':1,'Oil':3},wu:3,size:'s'});
+add('Potions - Healing','Healing Balm',{i:{'Acacia':1,'Lycopodium':1,'Cream':3},wu:3,size:'s'});
+add('Potions - Healing','Healing Draught',{i:{'Agaric':1,'Rosemary':1,'Oil':3},wu:6,size:'s'});
+add('Potions - Healing','Nomad\'s Potion of Healing',{i:{'Essence of Agaric':1,'Essence of Amaranth':1,'Essence of Fireweed':1,'Oil':3},wu:30,size:'s'});
+add('Potions - Healing','Potion of Recall',{i:{'Fenugreek':1,'Moonflower Seeds':1,'Fluid':3},wu:6,size:'s'});
+
+// --- ALCHEMY: IMBUEMENTS ---
+add('Imbuements','All That Glitters',{i:{'Gentian':1,'Hemlock':1,'Powder':3},wu:4,size:'s'});
+add('Imbuements','Burning Oil',{i:{'Cayenne':1,'White Bryony':1,'Oil':3},wu:6,size:'s'});
+add('Imbuements','Perfect Oil',{i:{'Benne':1,'Jambul Seeds':1,'Oil':3},wu:8,size:'s'});
+add('Imbuements','Pure Water',{i:{'Beth Root':1,'Sweet Geranium':1,'Oil':3},wu:3,size:'s'});
+add('Imbuements','Rosalie\'s Reinforcing Resin',{i:{'Colewort':1,'Black Horehound':1,'Stag Horn':1,'Cream':1,'Oil':1,'Powder':1},wu:12,size:'s'});
+add('Imbuements','Sweet Elixir',{i:{'Gelsemium':1,'Nux Vomica':1,'Fluid':3},wu:9,size:'s'});
+add('Imbuements','Tanglebomb',{i:{'Amaranth':1,'Oidium Sano':1,'Cream':1,'Oil':1,'Powder':1},wu:5,size:'s'});
+add('Imbuements','Thief\'s Friend',{i:{'Black Horehound':1,'White Bryony':1,'Fluid':3},wu:4,size:'s'});
+add('Imbuements','Verdant Lotion',{i:{'Acorn':1,'Lycopodium':1,'Cream':3},wu:6,size:'s'});
+
+// --- ALCHEMY: MAGICAL INKS ---
+add('Magical Inks','True Ink',{i:{'Essence of Cayenne':1,'Essence of Lotus Leaves':1,'Essence of Yellow Fungus':1,'Fluid':3},wu:9,size:'s'});
+add('Magical Inks','Corporeal Ink',{i:{'Essence of Yellow Fungus':1,'Box Leaves':1,'Fluid':3},wu:6,size:'s'});
+add('Magical Inks','Elemental Ink',{i:{'Essence of Cayenne':1,'Amaranth':1,'Fluid':3},wu:6,size:'s'});
+add('Magical Inks','Spiritual Ink',{i:{'Essence of Lotus Leaves':1,'Master Wort':1,'Fluid':3},wu:6,size:'s'});
+
+// --- ALCHEMY: AMALGAMS ---
+add('Amalgams','True Amalgam',{i:{'Copper Ore':1,'Gold Ore':1,'Silver Ore':1,'Blue Agate':1,'Green Agate':1,'Red Agate':1,'Charcoal':3},wu:18,size:'s'});
+add('Amalgams','Corporeal Amalgam',{i:{'Copper Ore':2,'Green Agate':1,'Sage Quartz':1,'Charcoal':2},wu:9,size:'s'});
+add('Amalgams','Elemental Amalgam',{i:{'Gold Ore':2,'Red Agate':1,'Crimson Quartz':1,'Charcoal':2},wu:9,size:'s'});
+add('Amalgams','Spiritual Amalgam',{i:{'Silver Ore':2,'Blue Agate':1,'Navy Quartz':1,'Charcoal':2},wu:9,size:'s'});
+
+// --- ALCHEMY: POISONS (DESTRUCTIVE) ---
+add('Poisons - Destructive','Beggars Poison',{i:{'Abscess Root':1,'Spider Venom':1,'Fluid':3},wu:6,size:'s'});
+add('Poisons - Destructive','Bitter Kiss',{i:{'Viper Venom':2,'Oil':3},wu:5,size:'s'});
+add('Poisons - Destructive','False Balm',{i:{'Abscess Root':1,'Skullcap':1,'Cream':3},wu:4,size:'s'});
+add('Poisons - Destructive','Ghoulsbane',{i:{'Black Mushroom Powder':1,'Hyssop':1,'Powder':3},wu:2,size:'s'});
+
+// --- ALCHEMY: POISONS (NON-LETHAL) ---
+add('Poisons - Non-Lethal','Blinding Powder',{i:{'Chokeweed':1,'Spider Venom':1,'Powder':3},wu:5,size:'s'});
+add('Poisons - Non-Lethal','Fool\'s Draught',{i:{'Chokeweed':1,'Spikenard':1,'Fluid':3},wu:6,size:'s'});
+add('Poisons - Non-Lethal','Itching Powder',{i:{'Beth Root':1,'Black Mushroom Powder':1,'Powder':3},wu:5,size:'s'});
+add('Poisons - Non-Lethal','The Shakes',{i:{'Hemlock':1,'Jambul Seeds':1,'Fluid':3},wu:4,size:'s'});
+add('Poisons - Non-Lethal','Sleeping Draught',{i:{'Agrimony':1,'Black Mushroom Powder':1,'Fluid':3},wu:5,size:'s'});
+add('Poisons - Non-Lethal','Tongue-Tying Tincture',{i:{'Belladonna':1,'Yellow Fungus':1,'Fluid':3},wu:3,size:'s'});
+add('Poisons - Non-Lethal','Truth Potion',{i:{'Fenugreek':1,'Nux Vomica':1,'Fluid':3},wu:4,size:'s'});
 
 // --- SURGERY: HEALING ---
 add('Surgery - Healing','Surgeon\'s Bandage (x3)',{i:{'Cloth (O)':1},wu:3,y:3,size:'s'});
@@ -587,7 +678,7 @@ const TYPES = {
   'Materials': [
     'Passive Ingredients','Passive Materials',
     'Finished Materials (O)','Finished Materials (H)',
-    'Jewellery Metals','Wire','Alchemy'
+    'Jewellery Metals','Wire','Essences & Humours'
   ],
   'Armour': [
     'Armour - Light','Armour - Medium','Armour - Heavy',
@@ -619,6 +710,10 @@ const TYPES = {
   'Weapons': [
     'Weapons - Small','Weapons - One-Handed','Weapons - Two-Handed',
     'Weapons - Polearm','Weapons - Projectile'
+  ],
+  'Alchemy': [
+    'Potions - Enhancing','Potions - Healing','Imbuements',
+    'Magical Inks','Amalgams','Poisons - Destructive','Poisons - Non-Lethal'
   ],
   'Surgery': [
     'Surgery - Healing','Surgery - Grafts','Surgery - Tattoos'
@@ -738,6 +833,97 @@ chkOrnate.addEventListener('change', () => { updateOrnateOptions(); updateJewelV
 selOrnate.addEventListener('change', () => { updateJewelVisibility(); rebuildTree(); });
 selJewel.addEventListener('change', rebuildTree);
 document.getElementById('numWuCost').addEventListener('input', rebuildTree);
+
+// ============================================================
+//  SEARCH
+// ============================================================
+const txtSearch = document.getElementById('txtSearch');
+const searchResults = document.getElementById('searchResults');
+
+// Build flat index of all items
+const allItems = [];
+for(const [typeName, cats] of Object.entries(TYPES)) {
+  for(const cat of cats) {
+    const items = D[cat] || [];
+    items.forEach((item, idx) => {
+      allItems.push({ name: item.name, type: typeName, cat, idx });
+    });
+  }
+}
+
+let searchActive = false;
+let activeResultIdx = -1;
+
+txtSearch.addEventListener('input', () => {
+  const q = txtSearch.value.trim().toLowerCase();
+  if(!q) {
+    searchResults.style.display = 'none';
+    searchActive = false;
+    activeResultIdx = -1;
+    return;
+  }
+  const matches = allItems.filter(it => it.name.toLowerCase().includes(q));
+  if(matches.length === 0) {
+    searchResults.innerHTML = '<div style="padding:8px;color:#667">No results</div>';
+    searchResults.style.display = '';
+    searchActive = true;
+    return;
+  }
+  searchResults.innerHTML = '';
+  matches.slice(0, 20).forEach((m, i) => {
+    const div = document.createElement('div');
+    div.className = 'search-result';
+    div.innerHTML = '<span class="sr-name">' + m.name + '</span><span class="sr-cat">' + m.cat + '</span>';
+    div.addEventListener('click', () => selectSearchResult(m));
+    searchResults.appendChild(div);
+  });
+  searchResults.style.display = '';
+  searchActive = true;
+  activeResultIdx = -1;
+});
+
+txtSearch.addEventListener('keydown', (e) => {
+  if(!searchActive) return;
+  const items = searchResults.querySelectorAll('.search-result');
+  if(e.key === 'ArrowDown') {
+    e.preventDefault();
+    activeResultIdx = Math.min(activeResultIdx + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('active', i === activeResultIdx));
+  } else if(e.key === 'ArrowUp') {
+    e.preventDefault();
+    activeResultIdx = Math.max(activeResultIdx - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('active', i === activeResultIdx));
+  } else if(e.key === 'Enter' && activeResultIdx >= 0) {
+    e.preventDefault();
+    const q = txtSearch.value.trim().toLowerCase();
+    const matches = allItems.filter(it => it.name.toLowerCase().includes(q));
+    if(matches[activeResultIdx]) selectSearchResult(matches[activeResultIdx]);
+  } else if(e.key === 'Escape') {
+    searchResults.style.display = 'none';
+    searchActive = false;
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if(!txtSearch.contains(e.target) && !searchResults.contains(e.target)) {
+    searchResults.style.display = 'none';
+    searchActive = false;
+  }
+});
+
+function selectSearchResult(m) {
+  // Set the type, category, and item dropdowns to match
+  selType.value = m.type;
+  populateCategories();
+  selCat.value = m.cat;
+  populateItems();
+  selItem.value = m.idx;
+  updateUI();
+  // Close search
+  searchResults.style.display = 'none';
+  searchActive = false;
+  txtSearch.value = m.name;
+}
 
 // ============================================================
 //  TREE COMPUTATION
