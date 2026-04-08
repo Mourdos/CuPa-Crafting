@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CuPa Crafting Calculator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#1a1a2e;color:#e0e0e0;min-height:100vh;display:flex;flex-direction:column}
+header{background:#16213e;padding:16px 24px;border-bottom:2px solid #0f3460;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{font-size:1.4rem;color:#e94560;white-space:nowrap}
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.control-group{display:flex;flex-direction:column;gap:3px}
+.control-group label{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#8899aa}
+select,input[type=number]{background:#0f3460;border:1px solid #334466;color:#e0e0e0;padding:6px 10px;border-radius:4px;font-size:.9rem}
+select{min-width:160px;max-width:280px}
+input[type=number]{width:70px}
+select:focus,input:focus{outline:none;border-color:#e94560}
+.checkbox-group{display:flex;align-items:center;gap:6px;margin-top:14px}
+.checkbox-group label{font-size:.85rem;color:#aab}
+main{flex:1;display:flex;gap:0;overflow:hidden}
+.tree-panel{flex:1;overflow:auto;padding:20px 24px}
+.summary-panel{width:300px;min-width:260px;background:#16213e;border-left:2px solid #0f3460;padding:20px;overflow:auto}
+.summary-panel h2{font-size:1rem;color:#e94560;margin-bottom:12px;border-bottom:1px solid #334466;padding-bottom:8px}
+.summary-row{display:flex;justify-content:space-between;padding:4px 0;font-size:.85rem;border-bottom:1px solid #1a1a2e}
+.summary-row .mat-name{color:#ccd}
+.summary-row .mat-qty{font-weight:600;color:#fff;min-width:30px;text-align:right}
+.rarity-vc{color:#8a9a8a}
+.rarity-c{color:#5cb85c}
+.rarity-u{color:#5bc0de}
+.rarity-r{color:#d4a}
+.rarity-tag{font-size:.65rem;padding:1px 5px;border-radius:3px;font-weight:700;margin-left:6px;vertical-align:middle}
+.rarity-tag.vc{background:#2a3a2a;color:#8a9a8a}
+.rarity-tag.c{background:#1a3a1a;color:#5cb85c}
+.rarity-tag.u{background:#1a2a3a;color:#5bc0de}
+.rarity-tag.r{background:#2a1a2a;color:#d4a}
+.wu-total{font-size:1.3rem;color:#e94560;font-weight:700;margin-bottom:8px}
+.cost-est{font-size:.85rem;color:#aab;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #334466}
+.cost-est span{color:#fc6}
+
+/* Tree styles */
+.tree-root{padding-left:0}
+.tree-node{position:relative;padding-left:24px}
+.tree-node::before{content:'';position:absolute;left:8px;top:0;bottom:12px;width:1px;background:#334466}
+.tree-node:last-child::before{bottom:auto;height:16px}
+.tree-node::after{content:'';position:absolute;left:8px;top:16px;width:14px;height:1px;background:#334466}
+.tree-root>.tree-node::before,.tree-root>.tree-node::after{display:none}
+.tree-root>.tree-node{padding-left:0}
+.node-row{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;margin:2px 0;border-radius:4px;background:#16213e;border:1px solid #1f2f4f;cursor:default;white-space:nowrap}
+.node-row:hover{border-color:#334466;background:#1a2540}
+.node-qty{color:#fc6;font-weight:700;min-width:30px}
+.node-name{color:#e0e0e0}
+.node-wu{font-size:.75rem;color:#e94560;background:#2a1020;padding:1px 6px;border-radius:3px}
+.node-surplus{font-size:.75rem;color:#8a9a8a;font-style:italic}
+.node-raw .node-row{border-color:#2a3a2a;background:#121e12}
+.node-children{padding-left:2px}
+.node-root>.node-row{background:#2a1030;border-color:#e94560;font-size:1.05rem}
+.node-root>.node-row .node-name{color:#fff;font-weight:600}
+
+.empty-state{color:#556;font-size:1.1rem;margin-top:60px;text-align:center}
+
+@media(max-width:800px){
+  main{flex-direction:column}
+  .summary-panel{width:100%;border-left:none;border-top:2px solid #0f3460}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>CuPa Crafting Calculator</h1>
+  <div class="controls">
+    <div class="control-group">
+      <label>Type</label>
+      <select id="selType"></select>
+    </div>
+    <div class="control-group">
+      <label>Sub-category</label>
+      <select id="selCategory"></select>
+    </div>
+    <div class="control-group">
+      <label>Item</label>
+      <select id="selItem"></select>
+    </div>
+    <div class="control-group">
+      <label id="lblQty">Quantity</label>
+      <input type="number" id="numQty" value="1" min="1" max="99">
+    </div>
+    <div class="control-group">
+      <label>WU cost (cp)</label>
+      <input type="number" id="numWuCost" value="2" min="0" step="0.5" max="99">
+    </div>
+    <div class="control-group" id="grpJewel" style="display:none">
+      <label>Jewellery Metal</label>
+      <select id="selJewel">
+        <option value="Copper Metal">Copper</option>
+        <option value="Silver Metal">Silver</option>
+        <option value="Gold Metal">Gold</option>
+      </select>
+    </div>
+    <div class="checkbox-group">
+      <input type="checkbox" id="chkOrnate">
+      <label for="chkOrnate">Ornate</label>
+    </div>
+    <div class="control-group" id="grpOrnate" style="display:none">
+      <label>Finish</label>
+      <select id="selOrnate"></select>
+    </div>
+    <div class="control-group" id="grpOrnateVariant" style="display:none">
+      <label>Material</label>
+      <select id="selOrnateVariant"></select>
+    </div>
+  </div>
+</header>
+<main>
+  <div class="tree-panel" id="treePanel">
+    <div class="empty-state">Select an item to see its crafting tree.</div>
+  </div>
+  <div class="summary-panel" id="summaryPanel">
+    <h2>Summary</h2>
+    <div id="summaryContent"><div class="empty-state" style="font-size:.9rem;margin-top:20px">No item selected.</div></div>
+  </div>
+</main>
+
+<script>
+// ============================================================
+//  RARITY DATA
+// ============================================================
+const RARITY = {
+  'Timber':'VC','Hide':'VC','Ore':'VC','Sand':'VC','Rock':'VC','Fleece':'VC',
+  'Wax':'VC','Clay':'VC','Chalk':'VC',
+  'Herb (any)':'C','Body Part':'C','Lead Ore':'C','Nickel Ore':'C','Tin Ore':'C',
+  'Copper Ore':'U','Gold Ore':'U','Silver Ore':'U',
+  'Gem (any)':'U',
+  'Cold Iron Ore':'R','Platinum Ore':'R',
+  // Passive
+  'Cream':'VC','Fluid':'VC','Ink':'VC','Oil':'VC','Powder':'VC',
+  'Powdered Dye':'VC','Ash':'VC','Charcoal':'VC','Powdered Bone':'VC',
+  'Powdered Metal':'VC','Powdered Gemstone':'C',
+  // Finished materials
+  'Bone (O)':'C','Cloth (O)':'C','Glass (O)':'C','Leather (O)':'C',
+  'Metal (O)':'C','Paper (O)':'C','Stone (O)':'C','Wood (O)':'C',
+  'Bone (H)':'U','Cloth (H)':'U','Glass (H)':'U','Leather (H)':'U',
+  'Metal (H)':'U','Paper (H)':'U','Stone (H)':'U','Wood (H)':'U',
+  'Lead Metal':'U','Nickel Metal':'U','Tin Metal':'U',
+  'Copper Metal':'R','Gold Metal':'R','Silver Metal':'R',
+  'Metal Wire':'U','Copper Wire':'R','Silver Wire':'R','Gold Wire':'R',
+  'Lead Wire':'U','Nickel Wire':'U','Tin Wire':'U',
+  'Amalgam':'R',
+  // Alchemy
+  'Blood':'C','Essence':'U',
+  'Chymos':'U','Cruor':'U','Ichor':'U',
+  // Surgery
+  'Claw':'C','Bandage':'C',
+};
+
+// Price in copper per unit (4c = 1s, 4s = 1g)
+const PRICE_COPPER = { 'VC': 8/9, 'C': 8/3, 'U': 8, 'R': 24 };
+
+// ============================================================
+//  MATERIAL RECIPES  (intermediate conversions)
+// ============================================================
+const MAT = {
+  // Passive ingredients (yield 3)
+  'Cream':     {i:{'Oil':1}, y:3, wu:1},
+  'Fluid':     {i:{'Oil':1}, y:3, wu:1},
+  'Ink':       {i:{'Charcoal':1}, y:3, wu:1},
+  'Oil':       {i:{'Herb (any)':1}, y:3, wu:1},
+  'Powder':    {i:{'Herb (any)':1}, y:3, wu:1},
+  'Powdered Dye':{i:{'Herb (any)':1}, y:3, wu:1},
+  // Passive materials (yield 3)
+  'Ash':       {i:{'Timber':1}, y:3, wu:1},
+  'Charcoal':  {i:{'Timber':1}, y:3, wu:1},
+  'Powdered Bone':    {i:{'Bone (O)':1}, y:3, wu:1},
+  'Powdered Gemstone':{i:{'Gem (any)':1}, y:3, wu:1},
+  'Powdered Metal':   {i:{'Metal (O)':1}, y:3, wu:1},
+  // Finished materials (yield 1)
+  'Bone (O)':   {i:{'Body Part':1,'Sand':1}, y:1, wu:1},
+  'Bone (H)':   {i:{'Body Part':3,'Sand':1}, y:1, wu:3},
+  'Cloth (O)':  {i:{'Fleece':1,'Fluid':1}, y:1, wu:1},
+  'Cloth (H)':  {i:{'Fleece':3,'Fluid':1}, y:1, wu:3},
+  'Glass (O)':  {i:{'Sand':1,'Charcoal':1}, y:1, wu:1},
+  'Glass (H)':  {i:{'Sand':3,'Charcoal':1}, y:1, wu:3},
+  'Leather (O)':{i:{'Hide':1,'Cream':1}, y:1, wu:1},
+  'Leather (H)':{i:{'Hide':3,'Cream':1}, y:1, wu:3},
+  'Metal (O)':  {i:{'Ore':1,'Charcoal':1}, y:1, wu:1},
+  'Metal (H)':  {i:{'Ore':3,'Charcoal':1}, y:1, wu:3},
+  'Paper (O)':  {i:{'Timber':1,'Fluid':1}, y:1, wu:1},
+  'Paper (H)':  {i:{'Timber':3,'Fluid':1}, y:1, wu:3},
+  'Stone (O)':  {i:{'Rock':1,'Sand':1}, y:1, wu:1},
+  'Stone (H)':  {i:{'Rock':3,'Sand':1}, y:1, wu:3},
+  'Wood (O)':   {i:{'Timber':1,'Fluid':1}, y:1, wu:1},
+  'Wood (H)':   {i:{'Timber':3,'Fluid':1}, y:1, wu:3},
+  // Jewellery metals
+  'Copper Metal':{i:{'Copper Ore':1,'Charcoal':1}, y:1, wu:9},
+  'Gold Metal':  {i:{'Gold Ore':1,'Charcoal':1}, y:1, wu:9},
+  'Silver Metal':{i:{'Silver Ore':1,'Charcoal':1}, y:1, wu:9},
+  'Lead Metal':  {i:{'Lead Ore':1,'Charcoal':1}, y:1, wu:3},
+  'Nickel Metal':{i:{'Nickel Ore':1,'Charcoal':1}, y:1, wu:3},
+  'Tin Metal':   {i:{'Tin Ore':1,'Charcoal':1}, y:1, wu:3},
+  // Wire (yield 3)
+  'Metal Wire':  {i:{'Metal (H)':1,'Charcoal':1}, y:3, wu:1},
+  'Copper Wire': {i:{'Copper Metal':1,'Charcoal':1}, y:3, wu:3},
+  'Gold Wire':   {i:{'Gold Metal':1,'Charcoal':1}, y:3, wu:3},
+  'Silver Wire': {i:{'Silver Metal':1,'Charcoal':1}, y:3, wu:3},
+  'Lead Wire':   {i:{'Lead Metal':1,'Charcoal':1}, y:3, wu:3},
+  'Nickel Wire': {i:{'Nickel Metal':1,'Charcoal':1}, y:3, wu:3},
+  'Tin Wire':    {i:{'Tin Metal':1,'Charcoal':1}, y:3, wu:3},
+  // Alchemy
+  'Essence':     {i:{'Herb (any)':3,'Oil':1}, y:1, wu:1},
+  'Chymos':      {i:{'Blood':1}, y:1, wu:1},
+  'Cruor':       {i:{'Blood':1}, y:1, wu:1},
+  'Ichor':       {i:{'Blood':1}, y:1, wu:1},
+};
+
+// ============================================================
+//  CRAFTING DESIGNS
+//  Each: { i:{material:qty,...}, wu:N, y:yield(default 1),
+//          cat:ornateCategory, size:'s'|'l'|'loc',
+//          jewel:bool, plateLeather:bool }
+// ============================================================
+const D = {};
+function add(cat, name, props) {
+  if(!D[cat]) D[cat]=[];
+  props.cat = props.cat||cat;
+  D[cat].push({name, ...props});
+}
+
+// --- ARMOUR - LIGHT (per location) ---
+add('Armour - Light','Padded Cloth Armour',{i:{'Cloth (H)':4},wu:16,size:'loc',ocat:'armour'});
+add('Armour - Light','Hide Armour',{i:{'Hide':12},wu:18,size:'loc',ocat:'armour'});
+add('Armour - Light','Leather Armour',{i:{'Leather (H)':4,'Oil':4},wu:19,size:'loc',ocat:'armour'});
+
+// --- ARMOUR - MEDIUM ---
+add('Armour - Medium','Light Chain/Ring Armour',{i:{'Metal (H)':4,'Charcoal':4},wu:23,size:'loc',ocat:'armour'});
+add('Armour - Medium','Studded Padded Cloth Armour',{i:{'Cloth (H)':4,'Metal (H)':2,'Charcoal':2},wu:25,size:'loc',ocat:'armour'});
+add('Armour - Medium','Studded Leather Armour',{i:{'Leather (H)':4,'Metal (H)':2,'Charcoal':2,'Oil':4},wu:26,size:'loc',ocat:'armour'});
+
+// --- ARMOUR - HEAVY ---
+add('Armour - Heavy','Heavy Chain Armour',{i:{'Metal (H)':8,'Charcoal':8},wu:30,size:'loc',ocat:'armour'});
+add('Armour - Heavy','Plate Armour',{i:{'Metal (H)':8,'Charcoal':8},wu:32,size:'loc',ocat:'armour',plateLeather:true});
+
+// --- SHIELDS ---
+add('Armour - Shields','Metal Shield',{i:{'Metal (H)':2,'Charcoal':2},wu:11,size:'s',ocat:'armour'});
+add('Armour - Shields','Wooden Shield',{i:{'Wood (H)':2,'Oil':2},wu:11,size:'s',ocat:'armour'});
+
+// --- ARMOUR STAPLES ---
+add('Armour - Misc','Armour Staple (x3)',{i:{'Metal (O)':1,'Charcoal':1},wu:3,y:3,size:'s'});
+
+// --- CLOTHING SMALL STANDARD ---
+add('Clothing - Small (Std)','Boots',{i:{'Leather (O)':2,'Oil':2},wu:4,size:'s',ocat:'clothing'});
+add('Clothing - Small (Std)','Gloves/Bracers (cloth)',{i:{'Cloth (O)':2,'Oil':2},wu:2,size:'s',ocat:'clothing'});
+add('Clothing - Small (Std)','Gloves/Bracers (leather)',{i:{'Leather (O)':2,'Oil':2},wu:2,size:'s',ocat:'clothing'});
+add('Clothing - Small (Std)','Hat (cloth)',{i:{'Cloth (O)':1,'Fluid':1},wu:4,size:'s',ocat:'clothing'});
+add('Clothing - Small (Std)','Hat (leather)',{i:{'Leather (O)':1,'Oil':1},wu:4,size:'s',ocat:'clothing'});
+add('Clothing - Small (Std)','Mask/Headband (leather)',{i:{'Leather (O)':1,'Oil':1},wu:2,size:'s',ocat:'clothing'});
+add('Clothing - Small (Std)','Mask/Headband (wood)',{i:{'Wood (O)':1,'Oil':1},wu:2,size:'s',ocat:'clothing'});
+add('Clothing - Small (Std)','Sash',{i:{'Cloth (O)':1},wu:3,size:'s',ocat:'clothing'});
+add('Clothing - Small (Std)','Shoes',{i:{'Leather (O)':1,'Oil':1},wu:2,size:'s',ocat:'clothing'});
+
+// --- CLOTHING SMALL MASTERCRAFTED ---
+add('Clothing - Small (MC)','MC Boots',{i:{'Leather (H)':3,'Oil':3},wu:14,size:'s',ocat:'clothing'});
+add('Clothing - Small (MC)','MC Gloves/Bracers (cloth)',{i:{'Cloth (H)':2,'Oil':2},wu:7,size:'s',ocat:'clothing'});
+add('Clothing - Small (MC)','MC Gloves/Bracers (leather)',{i:{'Leather (H)':2,'Oil':2},wu:7,size:'s',ocat:'clothing'});
+add('Clothing - Small (MC)','MC Hat (cloth)',{i:{'Cloth (H)':2,'Fluid':2},wu:14,size:'s',ocat:'clothing'});
+add('Clothing - Small (MC)','MC Hat (leather)',{i:{'Leather (H)':2,'Oil':2},wu:14,size:'s',ocat:'clothing'});
+add('Clothing - Small (MC)','MC Mask/Headband (leather)',{i:{'Leather (H)':2,'Oil':2},wu:7,size:'s',ocat:'clothing'});
+add('Clothing - Small (MC)','MC Mask/Headband (wood)',{i:{'Wood (H)':2,'Oil':2},wu:7,size:'s',ocat:'clothing'});
+add('Clothing - Small (MC)','MC Sash',{i:{'Cloth (H)':2},wu:10,size:'s',ocat:'clothing'});
+add('Clothing - Small (MC)','MC Shoes',{i:{'Leather (H)':2,'Oil':2},wu:7,size:'s',ocat:'clothing'});
+
+// --- CLOTHING LARGE STANDARD ---
+add('Clothing - Large (Std)','Cloak (cloth)',{i:{'Cloth (O)':2,'Oil':2},wu:3,size:'l',ocat:'clothing'});
+add('Clothing - Large (Std)','Cloak (leather)',{i:{'Leather (O)':2,'Oil':2},wu:3,size:'l',ocat:'clothing'});
+add('Clothing - Large (Std)','Dress',{i:{'Cloth (O)':2},wu:3,size:'l',ocat:'clothing'});
+add('Clothing - Large (Std)','Robes',{i:{'Cloth (O)':3},wu:4,size:'l',ocat:'clothing'});
+add('Clothing - Large (Std)','Shirt',{i:{'Cloth (O)':2},wu:2,size:'l',ocat:'clothing'});
+add('Clothing - Large (Std)','Trousers',{i:{'Cloth (O)':2},wu:2,size:'l',ocat:'clothing'});
+
+// --- CLOTHING LARGE MASTERCRAFTED ---
+add('Clothing - Large (MC)','MC Cloak (cloth)',{i:{'Cloth (H)':2,'Oil':2},wu:11,size:'l',ocat:'clothing'});
+add('Clothing - Large (MC)','MC Cloak (leather)',{i:{'Leather (H)':2,'Oil':2},wu:11,size:'l',ocat:'clothing'});
+add('Clothing - Large (MC)','MC Dress',{i:{'Cloth (H)':2},wu:9,size:'l',ocat:'clothing'});
+add('Clothing - Large (MC)','MC Robes',{i:{'Cloth (H)':3},wu:14,size:'l',ocat:'clothing'});
+add('Clothing - Large (MC)','MC Shirt',{i:{'Cloth (H)':2},wu:7,size:'l',ocat:'clothing'});
+add('Clothing - Large (MC)','MC Trousers',{i:{'Cloth (H)':2},wu:7,size:'l',ocat:'clothing'});
+
+// --- COMMON ITEMS STANDARD ---
+add('Common Items (Std)','Backpack',{i:{'Leather (H)':1,'Leather (O)':1,'Oil':2},wu:4,size:'s',ocat:'common'});
+add('Common Items (Std)','Bowl/Plate (clay)',{i:{'Clay':3,'Charcoal':1},wu:2,size:'s',ocat:'common'});
+add('Common Items (Std)','Bowl/Plate (wood)',{i:{'Wood (H)':1,'Oil':1},wu:2,size:'s',ocat:'common'});
+add('Common Items (Std)','Small Box/Chest',{i:{'Wood (O)':2,'Metal (O)':1,'Oil':2,'Charcoal':1},wu:8,size:'s',ocat:'common'});
+add('Common Items (Std)','Large Box/Chest',{i:{'Wood (O)':6,'Metal (O)':3,'Oil':6,'Charcoal':3},wu:12,size:'l',ocat:'common'});
+add('Common Items (Std)','Candle (x3)',{i:{'Wax':1},wu:1,y:3,size:'s'});
+add('Common Items (Std)','Candle Holder (clay)',{i:{'Clay':3,'Charcoal':1},wu:2,size:'s',ocat:'common'});
+add('Common Items (Std)','Candle Holder (metal)',{i:{'Metal (O)':1,'Charcoal':1},wu:2,size:'s',ocat:'common'});
+add('Common Items (Std)','Candle Holder (lead)',{i:{'Lead Metal':1,'Charcoal':1},wu:2,size:'s',ocat:'common'});
+add('Common Items (Std)','Chair/Throne (wood)',{i:{'Wood (H)':2,'Wood (O)':2,'Oil':4},wu:5,size:'l',ocat:'common'});
+add('Common Items (Std)','Chair/Throne (stone)',{i:{'Stone (H)':2,'Stone (O)':2,'Sand':4},wu:5,size:'l',ocat:'common'});
+add('Common Items (Std)','Cup (clay)',{i:{'Clay':3,'Charcoal':1},wu:2,size:'s',ocat:'common'});
+add('Common Items (Std)','Cup (wood)',{i:{'Wood (O)':1,'Oil':1},wu:2,size:'s',ocat:'common'});
+add('Common Items (Std)','Cup (metal)',{i:{'Metal (O)':1,'Charcoal':1},wu:2,size:'s',ocat:'common'});
+add('Common Items (Std)','Doll',{i:{'Cloth (O)':1},wu:4,size:'s',ocat:'common'});
+add('Common Items (Std)','Drinking Horn',{i:{'Bone (O)':1,'Sand':1},wu:4,size:'s',ocat:'common'});
+add('Common Items (Std)','Glass Vial',{i:{'Glass (O)':1},wu:3,size:'s',ocat:'common'});
+add('Common Items (Std)','Goblet (clay)',{i:{'Clay':6,'Charcoal':2},wu:4,size:'s',ocat:'common'});
+add('Common Items (Std)','Goblet (metal)',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:4,size:'s',ocat:'common'});
+add('Common Items (Std)','Hourglass',{i:{'Wood (O)':1,'Glass (O)':2,'Oil':1,'Charcoal':2},wu:12,size:'s',ocat:'common'});
+add('Common Items (Std)','Lantern',{i:{'Metal (O)':1,'Glass (O)':2,'Charcoal':3},wu:6,size:'s',ocat:'common'});
+add('Common Items (Std)','Manacles',{i:{'Metal (H)':1,'Metal (O)':2,'Charcoal':3},wu:11,size:'s',ocat:'common'});
+add('Common Items (Std)','Mirror',{i:{'Metal (H)':1,'Glass (O)':1,'Charcoal':2},wu:9,size:'s',ocat:'common'});
+add('Common Items (Std)','Pen',{i:{'Wood (H)':1,'Oil':1},wu:2,size:'s',ocat:'common'});
+add('Common Items (Std)','Scabbard',{i:{'Leather (H)':2,'Oil':2},wu:4,size:'s',ocat:'common'});
+add('Common Items (Std)','Spectacles',{i:{'Glass (H)':1,'Metal (O)':1,'Charcoal':2},wu:14,size:'s',ocat:'common'});
+add('Common Items (Std)','Coffee Table',{i:{'Wood (H)':4,'Wood (O)':4,'Oil':8},wu:6,size:'l',ocat:'common'});
+add('Common Items (Std)','Large Table',{i:{'Wood (H)':8,'Wood (O)':8,'Metal (O)':2,'Oil':16,'Charcoal':2},wu:12,size:'l',ocat:'common'});
+add('Common Items (Std)','Toy',{i:{'Wood (H)':1,'Metal (O)':1,'Oil':1,'Charcoal':1},wu:4,size:'s',ocat:'common'});
+add('Common Items (Std)','Wax Seal',{i:{'Metal (H)':1,'Wood (O)':1,'Oil':1,'Charcoal':1},wu:8,size:'s',ocat:'common'});
+add('Common Items (Std)','Tinderbox',{i:{'Metal (O)':1,'Fleece':1,'Rock':1,'Timber':1},wu:6,size:'s',ocat:'common'});
+
+// --- COMMON ITEMS MASTERCRAFTED ---
+add('Common Items (MC)','MC Backpack',{i:{'Leather (H)':2,'Oil':2},wu:8,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Bowl/Plate (clay)',{i:{'Clay':6,'Charcoal':2},wu:4,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Bowl/Plate (wood)',{i:{'Wood (H)':2,'Oil':2},wu:4,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Small Box/Chest',{i:{'Wood (H)':2,'Metal (H)':1,'Oil':2,'Charcoal':1},wu:15,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Large Box/Chest',{i:{'Wood (H)':6,'Metal (H)':3,'Oil':6,'Charcoal':3},wu:21,size:'l',ocat:'common'});
+add('Common Items (MC)','MC Candle Holder (clay)',{i:{'Clay':6,'Charcoal':2},wu:4,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Candle Holder (metal)',{i:{'Metal (H)':1,'Charcoal':1},wu:4,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Candle Holder (silver)',{i:{'Silver Metal':1,'Charcoal':1},wu:4,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Chair/Throne (wood)',{i:{'Wood (H)':4,'Oil':4},wu:10,size:'l',ocat:'common'});
+add('Common Items (MC)','MC Chair/Throne (stone)',{i:{'Stone (H)':4,'Sand':4},wu:10,size:'l',ocat:'common'});
+add('Common Items (MC)','MC Cup (clay)',{i:{'Clay':6,'Charcoal':1},wu:4,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Cup (wood)',{i:{'Wood (H)':1,'Wood (O)':1,'Oil':2},wu:4,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Cup (metal)',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:4,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Doll',{i:{'Cloth (H)':1},wu:7,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Drinking Horn',{i:{'Bone (H)':1,'Sand':1},wu:7,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Glass Vial',{i:{'Glass (H)':1},wu:5,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Goblet (clay)',{i:{'Clay':9,'Charcoal':2},wu:7,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Goblet (metal)',{i:{'Metal (H)':2,'Charcoal':2},wu:7,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Hourglass',{i:{'Wood (H)':1,'Glass (H)':2,'Oil':1,'Charcoal':2},wu:21,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Lantern',{i:{'Metal (H)':1,'Glass (H)':2,'Charcoal':3},wu:11,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Manacles',{i:{'Metal (H)':3,'Charcoal':3},wu:19,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Mirror',{i:{'Silver Metal':1,'Metal (H)':1,'Glass (H)':1,'Charcoal':3},wu:16,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Pen',{i:{'Wood (H)':1,'Metal (O)':1,'Oil':1,'Charcoal':1},wu:4,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Scabbard',{i:{'Leather (H)':2,'Metal (O)':1,'Oil':2,'Charcoal':1},wu:7,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Spectacles',{i:{'Gem (any)':2,'Metal (H)':1,'Glass (H)':1,'Charcoal':2},wu:25,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Coffee Table',{i:{'Wood (H)':8,'Oil':8},wu:11,size:'l',ocat:'common'});
+add('Common Items (MC)','MC Large Table',{i:{'Wood (H)':16,'Metal (O)':2,'Oil':16,'Charcoal':2},wu:21,size:'l',ocat:'common'});
+add('Common Items (MC)','MC Toy',{i:{'Wood (H)':1,'Metal (H)':1,'Oil':1,'Charcoal':1},wu:7,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Wax Seal',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s',ocat:'common'});
+add('Common Items (MC)','MC Tinderbox',{i:{'Metal (H)':1,'Fleece':1,'Rock':1,'Timber':1},wu:10,size:'s',ocat:'common'});
+
+// --- JEWELLERY STANDARD ---
+add('Jewellery (Std)','Bracelet',{i:{'@jewel':1,'Charcoal':1},wu:7,size:'s',ocat:'jewellery',jewel:true});
+add('Jewellery (Std)','Brooch',{i:{'@jewel':1,'Charcoal':1},wu:8,size:'s',ocat:'jewellery',jewel:true});
+add('Jewellery (Std)','Circlet/Torc',{i:{'@jewel':2,'Charcoal':2},wu:7,size:'s',ocat:'jewellery',jewel:true});
+add('Jewellery (Std)','Crown/Tiara',{i:{'@jewel':2,'Charcoal':2},wu:12,size:'s',ocat:'jewellery',jewel:true});
+add('Jewellery (Std)','Pendant/Necklace',{i:{'@jewel':1,'Charcoal':1},wu:10,size:'s',ocat:'jewellery',jewel:true});
+add('Jewellery (Std)','Ring/Earring',{i:{'@jewel':1,'Charcoal':1},wu:8,size:'s',ocat:'jewellery',jewel:true});
+
+// --- JEWELLERY MASTERCRAFTED ---
+add('Jewellery (MC)','MC Bracelet',{i:{'@jewel':1,'Charcoal':1},wu:12,size:'s',ocat:'jewellery',jewel:true});
+add('Jewellery (MC)','MC Brooch',{i:{'@jewel':1,'Charcoal':1},wu:14,size:'s',ocat:'jewellery',jewel:true});
+add('Jewellery (MC)','MC Circlet/Torc',{i:{'@jewel':2,'Charcoal':2},wu:12,size:'s',ocat:'jewellery',jewel:true});
+add('Jewellery (MC)','MC Crown/Tiara',{i:{'@jewel':2,'Charcoal':2},wu:21,size:'s',ocat:'jewellery',jewel:true});
+add('Jewellery (MC)','MC Pendant/Necklace',{i:{'@jewel':1,'Charcoal':1},wu:18,size:'s',ocat:'jewellery',jewel:true});
+add('Jewellery (MC)','MC Ring/Earring',{i:{'@jewel':1,'Charcoal':1},wu:14,size:'s',ocat:'jewellery',jewel:true});
+
+// --- MAGICAL TOOLS STANDARD ---
+add('Magical Tools (Std)','Candle (x3)',{i:{'Wax':1},wu:1,y:3,size:'s'});
+add('Magical Tools (Std)','Censer',{i:{'Metal (H)':1,'Charcoal':1},wu:5,size:'s'});
+add('Magical Tools (Std)','Crystal Ball',{i:{'Glass (O)':2,'Charcoal':2},wu:10,size:'s'});
+add('Magical Tools (Std)','Incense (x3)',{i:{'Herb (any)':1,'Powder':1},wu:1,y:3,size:'s'});
+add('Magical Tools (Std)','Rod',{i:{'Wood (O)':1,'Oil':1},wu:3,size:'s'});
+
+// --- MAGICAL TOOLS MASTERCRAFTED ---
+add('Magical Tools (MC)','MC Censer',{i:{'Metal (H)':2,'Charcoal':2},wu:9,size:'s'});
+add('Magical Tools (MC)','MC Crystal Ball',{i:{'Glass (H)':2,'Charcoal':2},wu:18,size:'s'});
+add('Magical Tools (MC)','MC Rod',{i:{'Wood (H)':1,'Oil':1},wu:5,size:'s'});
+
+// --- INVOCATION ITEMS ---
+add('Magical Tools - Invocation','Trinket (x3)',{i:{'Metal (O)':1},wu:3,y:3,size:'s'});
+add('Magical Tools - Invocation','Sigil Stone',{i:{'Stone (O)':1,'Sand':1},wu:2,size:'s'});
+add('Magical Tools - Invocation','Scroll Paper',{i:{'Paper (O)':1,'Fluid':1},wu:2,size:'s'});
+add('Magical Tools - Invocation','Scroll Vellum',{i:{'Leather (H)':1,'Fluid':1},wu:3,size:'s'});
+add('Magical Tools - Invocation','Wand (Lesser)',{i:{'Wood (H)':1,'Amalgam':1,'Oil':1},wu:5,size:'s'});
+add('Magical Tools - Invocation','Wand (Greater)',{i:{'Wood (H)':1,'Amalgam':2,'Oil':1},wu:9,size:'s'});
+add('Magical Tools - Invocation','Glass Sphere',{i:{'Glass (O)':1,'Charcoal':1},wu:5,size:'s'});
+add('Magical Tools - Invocation','MC Glass Sphere',{i:{'Glass (H)':1,'Charcoal':1},wu:8,size:'s'});
+
+// --- MECHANISMS STANDARD ---
+add('Mechanisms (Std)','Padlock',{i:{'Metal (H)':1,'Charcoal':1},wu:8,size:'s'});
+add('Mechanisms (Std)','Small Lock',{i:{'Metal (H)':1,'Charcoal':1},wu:5,size:'s'});
+add('Mechanisms (Std)','Large Lock',{i:{'Metal (H)':2,'Charcoal':2},wu:7,size:'s'});
+add('Mechanisms (Std)','Needle Trap',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:10,size:'s'});
+
+// --- MECHANISMS MASTERCRAFTED ---
+add('Mechanisms (MC)','MC Padlock',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s'});
+add('Mechanisms (MC)','MC Small Lock',{i:{'Metal (H)':2,'Charcoal':2},wu:9,size:'s'});
+add('Mechanisms (MC)','MC Large Lock',{i:{'Metal (H)':4,'Charcoal':4},wu:12,size:'s'});
+add('Mechanisms (MC)','MC Needle Trap',{i:{'Metal (H)':3,'Charcoal':3},wu:18,size:'s'});
+
+// --- KEYS ---
+add('Mechanisms - Keys','Additional Key',{i:{'Metal (H)':1,'Charcoal':1},wu:2,size:'s'});
+add('Mechanisms - Keys','Copy Key (Std)',{i:{'Metal (H)':1,'Charcoal':1},wu:2,size:'s'});
+add('Mechanisms - Keys','Copy Key (MC)',{i:{'Metal (H)':1,'Charcoal':1},wu:5,size:'s'});
+
+// --- PAPER & PRINTING ---
+add('Paper & Printing','Book (Std)',{i:{'Leather (O)':1,'Paper (O)':5,'Oil':1},wu:10,size:'s'});
+add('Paper & Printing','Book (MC)',{i:{'Leather (H)':1,'Paper (H)':5,'Oil':1},wu:20,size:'s'});
+add('Paper & Printing','Scroll Paper',{i:{'Paper (O)':1,'Fluid':1},wu:2,size:'s'});
+add('Paper & Printing','Scroll Vellum',{i:{'Leather (H)':1,'Fluid':1},wu:3,size:'s'});
+add('Paper & Printing','Printing Press',{i:{'Wood (H)':2,'Leather (H)':1,'Metal (O)':1,'Stone (O)':1,'Oil':3,'Sand':1,'Charcoal':1},wu:12,size:'l'});
+add('Paper & Printing','Printing Plate',{i:{'Stone (H)':1,'Sand':1},wu:2,size:'s'});
+
+// --- TOOLS ---
+add('Tools (Std)','Alchemist\'s Tools',{i:{'Metal (H)':1,'Charcoal':1},wu:10,size:'s'});
+add('Tools (Std)','Artist\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:8,size:'s'});
+add('Tools (Std)','Blacksmith\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:8,size:'s'});
+add('Tools (Std)','Carpenter\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:8,size:'s'});
+add('Tools (Std)','Gemsmith\'s Tools',{i:{'Metal (H)':1,'Glass (O)':1,'Charcoal':2},wu:12,size:'s'});
+add('Tools (Std)','Glassblower\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:10,size:'s'});
+add('Tools (Std)','Goldsmith\'s Tools',{i:{'Metal (O)':1,'Glass (O)':1,'Charcoal':2},wu:10,size:'s'});
+add('Tools (Std)','Lockpicks',{i:{'Metal (H)':1,'Charcoal':1},wu:6,size:'s'});
+add('Tools (Std)','Mechanician\'s Tools',{i:{'Metal (H)':1,'Glass (O)':1,'Charcoal':2},wu:12,size:'s'});
+add('Tools (Std)','Papermaker\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:8,size:'s'});
+add('Tools (Std)','Surgeon\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:12,size:'s'});
+add('Tools (Std)','Tailor\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:8,size:'s'});
+add('Tools (Std)','Thief\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:8,size:'s'});
+add('Tools (Std)','Trapper\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Cloth (O)':1,'Charcoal':2},wu:8,size:'s'});
+
+// --- TOOLS MASTERCRAFTED ---
+add('Tools (MC)','MC Alchemist\'s Tools',{i:{'Glass (H)':2,'Metal (H)':1,'Charcoal':3},wu:18,size:'s'});
+add('Tools (MC)','MC Artist\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s'});
+add('Tools (MC)','MC Blacksmith\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s'});
+add('Tools (MC)','MC Carpenter\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s'});
+add('Tools (MC)','MC Gemsmith\'s Tools',{i:{'Metal (H)':2,'Glass (H)':1,'Charcoal':3},wu:21,size:'s'});
+add('Tools (MC)','MC Glassblower\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:18,size:'s'});
+add('Tools (MC)','MC Goldsmith\'s Tools',{i:{'Metal (H)':1,'Glass (H)':1,'Charcoal':2},wu:18,size:'s'});
+add('Tools (MC)','MC Lockpicks',{i:{'Metal (H)':1,'Metal (O)':1,'Wood (O)':1,'Charcoal':2,'Oil':1},wu:12,size:'s'});
+add('Tools (MC)','MC Mechanician\'s Tools',{i:{'Metal (H)':2,'Glass (H)':1,'Charcoal':3},wu:21,size:'s'});
+add('Tools (MC)','MC Papermaker\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s'});
+add('Tools (MC)','MC Surgeon\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:21,size:'s'});
+add('Tools (MC)','MC Tailor\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s'});
+add('Tools (MC)','MC Thief\'s Tools',{i:{'Metal (H)':4,'Charcoal':4},wu:16,size:'s'});
+add('Tools (MC)','MC Trapper\'s Tools',{i:{'Metal (H)':2,'Cloth (H)':1,'Charcoal':2},wu:14,size:'s'});
+
+// --- WEAPONS SMALL/THROWN ---
+add('Weapons - Small','Dagger',{i:{'Metal (H)':2,'Charcoal':2},wu:7,size:'s',ocat:'weapon'});
+add('Weapons - Small','Hatchet',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:7,size:'s',ocat:'weapon'});
+add('Weapons - Small','Truncheon',{i:{'Wood (H)':2,'Oil':2},wu:7,size:'s',ocat:'weapon'});
+
+// --- WEAPONS ONE-HANDED ---
+add('Weapons - One-Handed','Axe/Mace/Short Spear',{i:{'Metal (H)':3,'Wood (H)':3,'Charcoal':3,'Oil':3},wu:11,size:'s',ocat:'weapon'});
+add('Weapons - One-Handed','Club/Stick',{i:{'Wood (H)':6,'Oil':6},wu:11,size:'s',ocat:'weapon'});
+add('Weapons - One-Handed','Sword (1H)',{i:{'Metal (H)':6,'Charcoal':6},wu:14,size:'s',ocat:'weapon'});
+
+// --- WEAPONS TWO-HANDED ---
+add('Weapons - Two-Handed','Axe/Mace (2H)',{i:{'Metal (H)':4,'Wood (H)':4,'Charcoal':4,'Oil':4},wu:14,size:'l',ocat:'weapon'});
+add('Weapons - Two-Handed','Club/Stick (2H)',{i:{'Wood (H)':8,'Oil':8},wu:14,size:'l',ocat:'weapon'});
+add('Weapons - Two-Handed','Sword (2H)',{i:{'Metal (H)':8,'Charcoal':8},wu:20,size:'l',ocat:'weapon'});
+
+// --- WEAPONS POLEARMS ---
+add('Weapons - Polearm','Spear/Pollaxe',{i:{'Metal (H)':4,'Wood (H)':4,'Charcoal':4,'Oil':4},wu:18,size:'l',ocat:'weapon'});
+add('Weapons - Polearm','Staff',{i:{'Wood (H)':6,'Oil':6},wu:18,size:'l',ocat:'weapon'});
+
+// --- WEAPONS PROJECTILE ---
+add('Weapons - Projectile','Bow',{i:{'Wood (H)':2,'Wood (O)':2,'Oil':4},wu:11,size:'s',ocat:'weapon'});
+add('Weapons - Projectile','Arrow (x3)',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:4,y:3,size:'s',ocat:'weapon'});
+add('Weapons - Projectile','Crossbow',{i:{'Wood (H)':2,'Metal (H)':2,'Charcoal':2,'Oil':2},wu:14,size:'l',ocat:'weapon'});
+add('Weapons - Projectile','Bolt (x3)',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:5,y:3,size:'s',ocat:'weapon'});
+
+// --- MATERIALS: PASSIVE INGREDIENTS ---
+add('Passive Ingredients','Cream',{i:{'Oil':1},wu:1,y:3,size:'s'});
+add('Passive Ingredients','Fluid',{i:{'Oil':1},wu:1,y:3,size:'s'});
+add('Passive Ingredients','Ink',{i:{'Charcoal':1},wu:1,y:3,size:'s'});
+add('Passive Ingredients','Oil',{i:{'Herb (any)':1},wu:1,y:3,size:'s'});
+add('Passive Ingredients','Powder',{i:{'Herb (any)':1},wu:1,y:3,size:'s'});
+add('Passive Ingredients','Powdered Dye',{i:{'Herb (any)':1},wu:1,y:3,size:'s'});
+
+// --- MATERIALS: PASSIVE MATERIALS ---
+add('Passive Materials','Ash',{i:{'Timber':1},wu:1,y:3,size:'s'});
+add('Passive Materials','Charcoal',{i:{'Timber':1},wu:1,y:3,size:'s'});
+add('Passive Materials','Powdered Bone',{i:{'Bone (O)':1},wu:1,y:3,size:'s'});
+add('Passive Materials','Powdered Gemstone',{i:{'Gem (any)':1},wu:1,y:3,size:'s'});
+add('Passive Materials','Powdered Metal',{i:{'Metal (O)':1},wu:1,y:3,size:'s'});
+
+// --- MATERIALS: FINISHED (ORDINARY) ---
+add('Finished Materials (O)','Bone (O)',{i:{'Body Part':1,'Sand':1},wu:1,size:'s'});
+add('Finished Materials (O)','Cloth (O)',{i:{'Fleece':1,'Fluid':1},wu:1,size:'s'});
+add('Finished Materials (O)','Glass (O)',{i:{'Sand':1,'Charcoal':1},wu:1,size:'s'});
+add('Finished Materials (O)','Leather (O)',{i:{'Hide':1,'Cream':1},wu:1,size:'s'});
+add('Finished Materials (O)','Metal (O)',{i:{'Ore':1,'Charcoal':1},wu:1,size:'s'});
+add('Finished Materials (O)','Paper (O)',{i:{'Timber':1,'Fluid':1},wu:1,size:'s'});
+add('Finished Materials (O)','Stone (O)',{i:{'Rock':1,'Sand':1},wu:1,size:'s'});
+add('Finished Materials (O)','Wood (O)',{i:{'Timber':1,'Fluid':1},wu:1,size:'s'});
+
+// --- MATERIALS: FINISHED (HIGH) ---
+add('Finished Materials (H)','Bone (H)',{i:{'Body Part':3,'Sand':1},wu:3,size:'s'});
+add('Finished Materials (H)','Cloth (H)',{i:{'Fleece':3,'Fluid':1},wu:3,size:'s'});
+add('Finished Materials (H)','Glass (H)',{i:{'Sand':3,'Charcoal':1},wu:3,size:'s'});
+add('Finished Materials (H)','Leather (H)',{i:{'Hide':3,'Cream':1},wu:3,size:'s'});
+add('Finished Materials (H)','Metal (H)',{i:{'Ore':3,'Charcoal':1},wu:3,size:'s'});
+add('Finished Materials (H)','Paper (H)',{i:{'Timber':3,'Fluid':1},wu:3,size:'s'});
+add('Finished Materials (H)','Stone (H)',{i:{'Rock':3,'Sand':1},wu:3,size:'s'});
+add('Finished Materials (H)','Wood (H)',{i:{'Timber':3,'Fluid':1},wu:3,size:'s'});
+
+// --- MATERIALS: JEWELLERY METALS ---
+add('Jewellery Metals','Copper Metal',{i:{'Copper Ore':1,'Charcoal':1},wu:9,size:'s'});
+add('Jewellery Metals','Gold Metal',{i:{'Gold Ore':1,'Charcoal':1},wu:9,size:'s'});
+add('Jewellery Metals','Silver Metal',{i:{'Silver Ore':1,'Charcoal':1},wu:9,size:'s'});
+add('Jewellery Metals','Lead Metal',{i:{'Lead Ore':1,'Charcoal':1},wu:3,size:'s'});
+add('Jewellery Metals','Nickel Metal',{i:{'Nickel Ore':1,'Charcoal':1},wu:3,size:'s'});
+add('Jewellery Metals','Tin Metal',{i:{'Tin Ore':1,'Charcoal':1},wu:3,size:'s'});
+
+// --- MATERIALS: WIRE ---
+add('Wire','Metal Wire',{i:{'Metal (H)':1,'Charcoal':1},wu:1,y:3,size:'s'});
+add('Wire','Copper Wire',{i:{'Copper Metal':1,'Charcoal':1},wu:3,y:3,size:'s'});
+add('Wire','Gold Wire',{i:{'Gold Metal':1,'Charcoal':1},wu:3,y:3,size:'s'});
+add('Wire','Silver Wire',{i:{'Silver Metal':1,'Charcoal':1},wu:3,y:3,size:'s'});
+add('Wire','Lead Wire',{i:{'Lead Metal':1,'Charcoal':1},wu:3,y:3,size:'s'});
+add('Wire','Nickel Wire',{i:{'Nickel Metal':1,'Charcoal':1},wu:3,y:3,size:'s'});
+add('Wire','Tin Wire',{i:{'Tin Metal':1,'Charcoal':1},wu:3,y:3,size:'s'});
+
+// --- ALCHEMY ---
+add('Alchemy','Essence',{i:{'Herb (any)':3,'Oil':1},wu:1,size:'s'});
+add('Alchemy','Chymos (wasteful)',{i:{'Blood':1},wu:1,size:'s'});
+add('Alchemy','Cruor (wasteful)',{i:{'Blood':1},wu:1,size:'s'});
+add('Alchemy','Ichor (wasteful)',{i:{'Blood':1},wu:1,size:'s'});
+add('Alchemy','All 3 Humours (efficient)',{i:{'Blood':1},wu:4,y:1,size:'s'});
+
+// --- SURGERY: HEALING ---
+add('Surgery - Healing','Surgeon\'s Bandage (x3)',{i:{'Cloth (O)':1},wu:3,y:3,size:'s'});
+add('Surgery - Healing','Heal Location',{i:{},wu:1,size:'s'});
+add('Surgery - Healing','Heal Body',{i:{'Blood':1},wu:2,size:'s'});
+add('Surgery - Healing','Rapid Heart (per charge)',{i:{'Chymos':1},wu:2,size:'s'});
+add('Surgery - Healing','Strengthened Pancreas (per charge)',{i:{'Cruor':1},wu:2,size:'s'});
+
+// --- SURGERY: GRAFTS ---
+add('Surgery - Grafts','Graft Claw',{i:{'Claw':1,'Blood':1},wu:10,size:'s'});
+add('Surgery - Grafts','Graft Limb',{i:{'Blood':1,'Body Part':1},wu:3,size:'s'});
+add('Surgery - Grafts','Transplant Organ',{i:{'Blood':1,'Body Part':1},wu:5,size:'s'});
+
+// --- SURGERY: TATTOOS ---
+add('Surgery - Tattoos','Mundane Tattoo',{i:{'Ink':1},wu:1,size:'s'});
+
+// ============================================================
+//  ORNATE FINISH DEFINITIONS
+// ============================================================
+const ORNATE_DEFS = {
+  armour: [
+    {name:'Engraved', i:{}, wuMult:1.5},
+    {name:'Dyed/Embroidered', i:{'Powdered Dye':3}, wuMult:1.5},
+    {name:'Brigandine Plate', i:{'Cloth (H)':3,'Powdered Dye':3}, wuMult:1.5},
+    {name:'Gilded/Inlaid', i:{'@jewel':1,'Charcoal':1}, wuMult:1.5, jewel:true},
+    {name:'Glass', i:{'Glass (H)':2}, wuMult:1.5},
+    {name:'Gems', i:{'Gem (any)':2}, wuMult:1.5},
+  ],
+  clothing: [
+    {name:'Dyed/Embroidered', i:{'Powdered Dye':3}, wuMult:1.5},
+    {name:'Glass', i:{'Glass (H)':2}, wuMult:1.5},
+    {name:'Gems', i:{'Gem (any)':2}, wuMult:1.5},
+    {name:'Metal Thread', i:{'@jewel':1,'Charcoal':1}, wuMult:1.5, jewel:true},
+  ],
+  common: [
+    {name:'Engraved', i:{}, wuMult:1.5},
+    {name:'Gilded/Inlaid', i:{'@jewel':1,'Charcoal':1}, wuMult:1.5, jewel:true},
+    {name:'Glass', i:{'Glass (H)':1}, wuMult:1.5},
+    {name:'Gems', i:{'Gem (any)':3}, wuMult:1.5},
+  ],
+  jewellery: [
+    {name:'Engraved', i:{}, wuMult:1.5},
+    {name:'Glass', i:{'Glass (H)':1}, wuMult:1.5},
+    {name:'Gem', i:{'Gem (any)':1}, wuMult:1.5},
+  ],
+  weapon: [
+    {name:'Engraved', i:{}, wuMult:1.5},
+    {name:'Gilded/Inlaid', i:{'@jewel':1,'Charcoal':1}, wuMult:1.5, jewel:true},
+    {name:'Glass', i:{'Glass (H)':1}, wuMult:1.5},
+    {name:'Gems', i:{'Gem (any)':3}, wuMult:1.5},
+  ],
+};
+
+// ============================================================
+//  TYPE -> CATEGORY MAPPING
+// ============================================================
+const TYPES = {
+  'Materials': [
+    'Passive Ingredients','Passive Materials',
+    'Finished Materials (O)','Finished Materials (H)',
+    'Jewellery Metals','Wire','Alchemy'
+  ],
+  'Armour': [
+    'Armour - Light','Armour - Medium','Armour - Heavy',
+    'Armour - Shields','Armour - Misc'
+  ],
+  'Clothing': [
+    'Clothing - Small (Std)','Clothing - Small (MC)',
+    'Clothing - Large (Std)','Clothing - Large (MC)'
+  ],
+  'Common Items': [
+    'Common Items (Std)','Common Items (MC)'
+  ],
+  'Jewellery': [
+    'Jewellery (Std)','Jewellery (MC)'
+  ],
+  'Magical Tools': [
+    'Magical Tools (Std)','Magical Tools (MC)',
+    'Magical Tools - Invocation'
+  ],
+  'Mechanisms': [
+    'Mechanisms (Std)','Mechanisms (MC)','Mechanisms - Keys'
+  ],
+  'Paper & Printing': [
+    'Paper & Printing'
+  ],
+  'Tools': [
+    'Tools (Std)','Tools (MC)'
+  ],
+  'Weapons': [
+    'Weapons - Small','Weapons - One-Handed','Weapons - Two-Handed',
+    'Weapons - Polearm','Weapons - Projectile'
+  ],
+  'Surgery': [
+    'Surgery - Healing','Surgery - Grafts','Surgery - Tattoos'
+  ],
+};
+
+// ============================================================
+//  UI LOGIC
+// ============================================================
+const selType = document.getElementById('selType');
+const selCat = document.getElementById('selCategory');
+const selItem = document.getElementById('selItem');
+const numQty = document.getElementById('numQty');
+const lblQty = document.getElementById('lblQty');
+const chkOrnate = document.getElementById('chkOrnate');
+const selOrnate = document.getElementById('selOrnate');
+const grpOrnate = document.getElementById('grpOrnate');
+const grpJewel = document.getElementById('grpJewel');
+const selJewel = document.getElementById('selJewel');
+const grpOrnateVariant = document.getElementById('grpOrnateVariant');
+const selOrnateVariant = document.getElementById('selOrnateVariant');
+const treePanel = document.getElementById('treePanel');
+const summaryContent = document.getElementById('summaryContent');
+
+// Populate types
+Object.keys(TYPES).forEach(t => {
+  const o = document.createElement('option');
+  o.value = t; o.textContent = t;
+  selType.appendChild(o);
+});
+
+function populateCategories() {
+  selCat.innerHTML = '';
+  const cats = TYPES[selType.value] || [];
+  cats.forEach(c => {
+    if(!D[c]) return; // skip empty categories
+    const o = document.createElement('option');
+    o.value = c;
+    // Show shorter label (strip type prefix)
+    const label = c.replace(/^.*? - /,'').replace(/^.*Items /,'').replace(/^.*Tools /,'');
+    o.textContent = c;
+    selCat.appendChild(o);
+  });
+  populateItems();
+}
+
+function populateItems() {
+  selItem.innerHTML = '';
+  const items = D[selCat.value] || [];
+  items.forEach((it,idx) => {
+    const o = document.createElement('option');
+    o.value = idx; o.textContent = it.name;
+    selItem.appendChild(o);
+  });
+  updateUI();
+}
+
+function getSelectedDesign() {
+  const items = D[selCat.value];
+  if(!items) return null;
+  return items[selItem.value] || null;
+}
+
+function updateUI() {
+  const design = getSelectedDesign();
+  if(!design) return;
+
+  // Show/hide location label
+  lblQty.textContent = design.size === 'loc' ? 'Locations' : 'Quantity';
+
+  // Ornate availability
+  const hasOrnate = !!design.ocat && !!ORNATE_DEFS[design.ocat];
+  chkOrnate.parentElement.style.display = hasOrnate ? '' : 'none';
+  if(!hasOrnate) chkOrnate.checked = false;
+  updateOrnateOptions();
+
+  // Jewellery metal
+  updateJewelVisibility();
+
+  rebuildTree();
+}
+
+function updateOrnateOptions() {
+  const design = getSelectedDesign();
+  if(!design || !chkOrnate.checked || !design.ocat) {
+    grpOrnate.style.display = 'none';
+    grpOrnateVariant.style.display = 'none';
+    return;
+  }
+  const defs = ORNATE_DEFS[design.ocat] || [];
+  grpOrnate.style.display = '';
+  selOrnate.innerHTML = '';
+  defs.forEach((d,i) => {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = d.name;
+    selOrnate.appendChild(o);
+  });
+  grpOrnateVariant.style.display = 'none';
+}
+
+function updateJewelVisibility() {
+  const design = getSelectedDesign();
+  let needsJewel = design && design.jewel;
+  if(chkOrnate.checked && design && design.ocat) {
+    const defs = ORNATE_DEFS[design.ocat] || [];
+    const orn = defs[selOrnate.value];
+    if(orn && orn.jewel) needsJewel = true;
+  }
+  grpJewel.style.display = needsJewel ? '' : 'none';
+}
+
+selType.addEventListener('change', populateCategories);
+selCat.addEventListener('change', populateItems);
+selItem.addEventListener('change', updateUI);
+numQty.addEventListener('input', rebuildTree);
+chkOrnate.addEventListener('change', () => { updateOrnateOptions(); updateJewelVisibility(); rebuildTree(); });
+selOrnate.addEventListener('change', () => { updateJewelVisibility(); rebuildTree(); });
+selJewel.addEventListener('change', rebuildTree);
+document.getElementById('numWuCost').addEventListener('input', rebuildTree);
+
+// ============================================================
+//  TREE COMPUTATION
+// ============================================================
+function resolveJewel(inputs) {
+  const resolved = {};
+  const jewelType = selJewel.value;
+  for(const [k,v] of Object.entries(inputs)) {
+    if(k === '@jewel') resolved[jewelType] = (resolved[jewelType]||0) + v;
+    else resolved[k] = (resolved[k]||0) + v;
+  }
+  return resolved;
+}
+
+function buildTree(name, needed) {
+  const recipe = MAT[name];
+  if(!recipe) {
+    // Raw material (leaf node)
+    return { name, needed, produced: needed, surplus:0, wu:0, isRaw:true, children:[] };
+  }
+  const batches = Math.ceil(needed / recipe.y);
+  const produced = batches * recipe.y;
+  const surplus = produced - needed;
+  const wu = recipe.wu * batches;
+  const children = [];
+  for(const [mat, qtyPer] of Object.entries(recipe.i)) {
+    children.push(buildTree(mat, qtyPer * batches));
+  }
+  return { name, needed, produced, surplus, wu, batches, isRaw:false, children };
+}
+
+function buildDesignTree() {
+  const design = getSelectedDesign();
+  if(!design) return null;
+
+  const qty = Math.max(1, parseInt(numQty.value)||1);
+  const itemYield = design.y || 1;
+  const batches = Math.ceil(qty / itemYield);
+  const produced = batches * itemYield;
+  const surplus = produced - qty;
+
+  // Resolve inputs with jewellery metal substitution
+  let inputs = resolveJewel(design.i);
+
+  // Scale by batches (and by locations for armour)
+  // For per-loc items, qty IS the number of locations
+  const scaledInputs = {};
+  for(const [k,v] of Object.entries(inputs)) {
+    scaledInputs[k] = v * batches;
+  }
+
+  // Plate leather (fixed cost)
+  if(design.plateLeather && batches > 0) {
+    scaledInputs['Leather (O)'] = (scaledInputs['Leather (O)']||0) + 1;
+  }
+
+  // Ornate additions
+  let ornateWuExtra = 0;
+  if(chkOrnate.checked && design.ocat) {
+    const defs = ORNATE_DEFS[design.ocat] || [];
+    const orn = defs[selOrnate.value];
+    if(orn) {
+      // WU multiplier applies to the base assembly WU
+      const baseWu = design.wu * batches;
+      ornateWuExtra = Math.ceil(baseWu * (orn.wuMult - 1));
+
+      // Ornate materials: per location for armour, per item otherwise
+      // Large items double ornate materials for clothing/common/weapon
+      let ornScale = batches;
+      if(design.size === 'l' && (design.ocat === 'clothing' || design.ocat === 'common' || design.ocat === 'weapon')) {
+        ornScale = batches * 2;
+      }
+      const ornInputs = resolveJewel(orn.i);
+      for(const [k,v] of Object.entries(ornInputs)) {
+        scaledInputs[k] = (scaledInputs[k]||0) + v * ornScale;
+      }
+    }
+  }
+
+  const assemblyWu = design.wu * batches + ornateWuExtra;
+
+  // Build children trees for each input
+  const children = [];
+  for(const [mat, total] of Object.entries(scaledInputs)) {
+    children.push(buildTree(mat, total));
+  }
+
+  return {
+    name: design.name + (produced > 1 ? '' : ''),
+    needed: qty,
+    produced,
+    surplus,
+    wu: assemblyWu,
+    isRaw: false,
+    isRoot: true,
+    children
+  };
+}
+
+// ============================================================
+//  SUMMARY (aggregate raw materials + total WU)
+// ============================================================
+function collectRaw(node, raws, totalWu, surpluses) {
+  totalWu.v += node.wu;
+  if(node.isRaw) {
+    raws[node.name] = (raws[node.name]||0) + node.needed;
+  }
+  if(node.surplus > 0) {
+    surpluses[node.name] = (surpluses[node.name]||0) + node.surplus;
+  }
+  for(const c of node.children) collectRaw(c, raws, totalWu, surpluses);
+}
+
+function formatCurrency(copper) {
+  const g = Math.floor(copper / 16);
+  const rem = copper % 16;
+  const s = Math.floor(rem / 4);
+  const c = rem % 4;
+  let parts = [];
+  if(g) parts.push(g + 'g');
+  if(s) parts.push(s + 's');
+  if(c) parts.push(Math.round(c*10)/10 + 'c');
+  return parts.join(' ') || '0c';
+}
+
+// ============================================================
+//  RENDERING
+// ============================================================
+function renderNode(node, isLast) {
+  const div = document.createElement('div');
+  div.className = 'tree-node' + (node.isRaw ? ' node-raw' : '') + (node.isRoot ? ' node-root' : '');
+
+  const row = document.createElement('div');
+  row.className = 'node-row';
+
+  const qtySpan = document.createElement('span');
+  qtySpan.className = 'node-qty';
+  qtySpan.textContent = node.needed + '\u00d7';
+  row.appendChild(qtySpan);
+
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'node-name';
+  nameSpan.textContent = node.name;
+  row.appendChild(nameSpan);
+
+  // Rarity tag
+  const r = RARITY[node.name];
+  if(r) {
+    const tag = document.createElement('span');
+    tag.className = 'rarity-tag ' + r.toLowerCase();
+    tag.textContent = r;
+    row.appendChild(tag);
+  }
+
+  if(!node.isRaw && node.wu > 0) {
+    const wuSpan = document.createElement('span');
+    wuSpan.className = 'node-wu';
+    wuSpan.textContent = node.wu + ' WU';
+    row.appendChild(wuSpan);
+  }
+
+  if(node.surplus > 0) {
+    const surp = document.createElement('span');
+    surp.className = 'node-surplus';
+    surp.textContent = '(+' + node.surplus + ' surplus)';
+    row.appendChild(surp);
+  }
+
+  div.appendChild(row);
+
+  if(node.children.length > 0) {
+    const childContainer = document.createElement('div');
+    childContainer.className = 'node-children';
+    node.children.forEach((c,i) => {
+      childContainer.appendChild(renderNode(c, i === node.children.length - 1));
+    });
+    div.appendChild(childContainer);
+  }
+
+  return div;
+}
+
+function rebuildTree() {
+  const tree = buildDesignTree();
+  if(!tree) {
+    treePanel.innerHTML = '<div class="empty-state">Select an item to see its crafting tree.</div>';
+    summaryContent.innerHTML = '<div class="empty-state" style="font-size:.9rem;margin-top:20px">No item selected.</div>';
+    return;
+  }
+
+  // Render tree
+  treePanel.innerHTML = '';
+  const root = document.createElement('div');
+  root.className = 'tree-root';
+  root.appendChild(renderNode(tree));
+  treePanel.appendChild(root);
+
+  // Render summary
+  const raws = {};
+  const totalWu = {v:0};
+  const surpluses = {};
+  collectRaw(tree, raws, totalWu, surpluses);
+
+  let html = '<div class="wu-total">' + totalWu.v + ' Total WU</div>';
+
+  // Estimate cost
+  let totalCopper = 0;
+  let hasUnknown = false;
+  for(const [name, qty] of Object.entries(raws)) {
+    const r = RARITY[name];
+    if(r && PRICE_COPPER[r]) {
+      totalCopper += qty * PRICE_COPPER[r];
+    } else {
+      hasUnknown = true;
+    }
+  }
+  const fmtCost = (copper) => {
+    const cg = Math.floor(copper / 16);
+    const cs = (copper % 16) / 4;
+    let s = '';
+    if(cg > 0) s += cg + 'g ';
+    s += cs.toFixed(1) + 's';
+    const totalSilver = (copper / 4);
+    s += ' (' + totalSilver.toFixed(1) + 's)';
+    return s;
+  };
+  html += '<div class="cost-est">Est. material cost: <span>' + fmtCost(totalCopper) + '</span>';
+  if(hasUnknown) html += ' <span style="color:#e94560">(+ unknown)</span>';
+  html += '</div>';
+
+  // Raw materials list sorted by rarity
+  const rarityOrder = {'R':0,'U':1,'C':2,'VC':3};
+  const sorted = Object.entries(raws).sort((a,b) => {
+    const ra = rarityOrder[RARITY[a[0]]] ?? 2;
+    const rb = rarityOrder[RARITY[b[0]]] ?? 2;
+    return ra - rb || a[0].localeCompare(b[0]);
+  });
+
+  // WU cost estimate
+  const wuRate = parseFloat(document.getElementById('numWuCost').value) || 2;
+  const wuCopper = totalWu.v * wuRate;
+  const totalEstCopper = totalCopper + wuCopper;
+
+  html += '<div class="cost-est">Est. WU cost: <span>' + fmtCost(wuCopper) + '</span> (' + totalWu.v + ' WU @ ' + wuRate + 'c each)</div>';
+  html += '<div class="cost-est" style="font-size:1rem;font-weight:700">Total est. cost: <span style="font-size:1.1rem">' + fmtCost(totalEstCopper) + '</span>';
+  if(hasUnknown) html += ' <span style="color:#e94560">(+ unknown)</span>';
+  html += '</div>';
+
+  html += '<h2 style="margin-top:8px">Raw Materials</h2>';
+  for(const [name, qty] of sorted) {
+    const r = RARITY[name];
+    const rc = r ? 'rarity-' + r.toLowerCase() : '';
+    html += '<div class="summary-row"><span class="mat-name ' + rc + '">' + name;
+    if(r) html += ' <span class="rarity-tag ' + r.toLowerCase() + '">' + r + '</span>';
+    html += '</span><span class="mat-qty">' + qty + '</span></div>';
+  }
+
+  // Surplus section
+  const surplusEntries = Object.entries(surpluses).sort((a,b) => a[0].localeCompare(b[0]));
+  if(surplusEntries.length > 0) {
+    html += '<h2 style="margin-top:16px">Surplus Created</h2>';
+    for(const [name, qty] of surplusEntries) {
+      const r = RARITY[name];
+      const rc = r ? 'rarity-' + r.toLowerCase() : '';
+      html += '<div class="summary-row"><span class="mat-name ' + rc + '">+' + qty + ' ' + name;
+      if(r) html += ' <span class="rarity-tag ' + r.toLowerCase() + '">' + r + '</span>';
+      html += '</span></div>';
+    }
+  }
+
+  summaryContent.innerHTML = html;
+}
+
+// Initialize
+populateCategories();
+</script>
+</body>
+</html>
