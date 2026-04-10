@@ -59,6 +59,11 @@ main{flex:1;display:flex;gap:0;overflow:hidden}
 
 .empty-state{color:#556;font-size:1.1rem;margin-top:60px;text-align:center}
 
+.calc-input{width:80px}
+.calc-op{background:#0f3460;border:2px solid #334466;color:#e0e0e0;padding:8px 18px;border-radius:4px;font-size:1.1rem;cursor:pointer}
+.calc-op:hover{border-color:#e94560;background:#1a2540}
+.calc-op.selected{border-color:#e94560;background:#e94560;color:#fff}
+
 .search-result{padding:6px 10px;cursor:pointer;font-size:.85rem;border-bottom:1px solid #1a1a2e}
 .search-result:hover,.search-result.active{background:#0f3460}
 .search-result .sr-name{color:#e0e0e0}
@@ -120,6 +125,10 @@ main{flex:1;display:flex;gap:0;overflow:hidden}
       <label>Material</label>
       <select id="selOrnateVariant"></select>
     </div>
+    <div class="checkbox-group">
+      <input type="checkbox" id="chkCalc">
+      <label for="chkCalc">Currency Calc</label>
+    </div>
   </div>
 </header>
 <main>
@@ -131,6 +140,36 @@ main{flex:1;display:flex;gap:0;overflow:hidden}
     <div id="summaryContent"><div class="empty-state" style="font-size:.9rem;margin-top:20px">No item selected.</div></div>
   </div>
 </main>
+
+<!-- Currency Calculator (hidden by default) -->
+<div id="calcPanel" style="display:none;flex:1;padding:32px;overflow:auto">
+  <div style="max-width:500px;margin:0 auto">
+    <h2 style="color:#e94560;margin-bottom:20px">Currency Calculator</h2>
+    <div style="display:flex;gap:12px;margin-bottom:16px;align-items:end">
+      <div class="control-group"><label>Gold</label><input type="number" id="calcG1" value="0" min="0" class="calc-input"></div>
+      <div class="control-group"><label>Silver</label><input type="number" id="calcS1" value="0" min="0" class="calc-input"></div>
+      <div class="control-group"><label>Copper</label><input type="number" id="calcC1" value="0" min="0" class="calc-input"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="calc-op" data-op="+">+</button>
+      <button class="calc-op" data-op="-">&minus;</button>
+      <button class="calc-op" data-op="*">&times;</button>
+      <button class="calc-op" data-op="/">&divide;</button>
+    </div>
+    <div id="calcRow2Currency" style="display:flex;gap:12px;margin-bottom:20px;align-items:end">
+      <div class="control-group"><label>Gold</label><input type="number" id="calcG2" value="0" min="0" class="calc-input"></div>
+      <div class="control-group"><label>Silver</label><input type="number" id="calcS2" value="0" min="0" class="calc-input"></div>
+      <div class="control-group"><label>Copper</label><input type="number" id="calcC2" value="0" min="0" class="calc-input"></div>
+    </div>
+    <div id="calcRow2Number" style="display:none;margin-bottom:20px">
+      <div class="control-group"><label>Amount</label><input type="number" id="calcNum" value="1" min="0" step="any" class="calc-input"></div>
+    </div>
+    <div style="border-top:2px solid #e94560;padding-top:16px">
+      <div style="font-size:1.3rem;color:#fff;margin-bottom:8px" id="calcResultGSC">0g 0s 0c</div>
+      <div style="font-size:1rem;color:#fc6" id="calcResultS">(0s)</div>
+    </div>
+  </div>
+</div>
 
 <script>
 // ============================================================
@@ -745,15 +784,21 @@ Object.keys(TYPES).forEach(t => {
   selType.appendChild(o);
 });
 
+function toggleCalc() {
+  const isCalc = document.getElementById('chkCalc').checked;
+  document.getElementById('calcPanel').style.display = isCalc ? 'flex' : 'none';
+  document.querySelector('main').style.display = isCalc ? 'none' : '';
+}
+
+document.getElementById('chkCalc').addEventListener('change', toggleCalc);
+
 function populateCategories() {
   selCat.innerHTML = '';
   const cats = TYPES[selType.value] || [];
   cats.forEach(c => {
-    if(!D[c]) return; // skip empty categories
+    if(!D[c]) return;
     const o = document.createElement('option');
     o.value = c;
-    // Show shorter label (strip type prefix)
-    const label = c.replace(/^.*? - /,'').replace(/^.*Items /,'').replace(/^.*Tools /,'');
     o.textContent = c;
     selCat.appendChild(o);
   });
@@ -1196,6 +1241,72 @@ function rebuildTree() {
 
   summaryContent.innerHTML = html;
 }
+
+// ============================================================
+//  CURRENCY CALCULATOR
+// ============================================================
+let calcOp = '+';
+document.querySelectorAll('.calc-op').forEach(btn => {
+  btn.addEventListener('click', () => {
+    calcOp = btn.dataset.op;
+    document.querySelectorAll('.calc-op').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const isNum = calcOp === '*' || calcOp === '/';
+    document.getElementById('calcRow2Currency').style.display = isNum ? 'none' : 'flex';
+    document.getElementById('calcRow2Number').style.display = isNum ? '' : 'none';
+    updateCalc();
+  });
+});
+// Default select +
+document.querySelector('.calc-op[data-op="+"]').classList.add('selected');
+
+function toCopper(g, s, c) {
+  return (g * 16) + (s * 4) + c;
+}
+
+function fromCopper(copper) {
+  const neg = copper < 0;
+  let c = Math.abs(copper);
+  const g = Math.floor(c / 16);
+  c -= g * 16;
+  const s = Math.floor(c / 4);
+  c -= s * 4;
+  // Round to avoid floating point noise
+  c = parseFloat(c.toFixed(2));
+  const prefix = neg ? '-' : '';
+  let parts = [];
+  if(g) parts.push(g + 'g');
+  if(s) parts.push(s + 's');
+  if(c || parts.length === 0) parts.push(c + 'c');
+  return prefix + parts.join(' ');
+}
+
+function updateCalc() {
+  const g1 = parseFloat(document.getElementById('calcG1').value) || 0;
+  const s1 = parseFloat(document.getElementById('calcS1').value) || 0;
+  const c1 = parseFloat(document.getElementById('calcC1').value) || 0;
+  const a = toCopper(g1, s1, c1);
+
+  let result;
+  if(calcOp === '*' || calcOp === '/') {
+    const n = parseFloat(document.getElementById('calcNum').value) || 0;
+    result = calcOp === '*' ? a * n : (n !== 0 ? a / n : 0);
+  } else {
+    const g2 = parseFloat(document.getElementById('calcG2').value) || 0;
+    const s2 = parseFloat(document.getElementById('calcS2').value) || 0;
+    const c2 = parseFloat(document.getElementById('calcC2').value) || 0;
+    const b = toCopper(g2, s2, c2);
+    result = calcOp === '+' ? a + b : a - b;
+  }
+
+  document.getElementById('calcResultGSC').textContent = fromCopper(result);
+  const totalS = parseFloat((result / 4).toFixed(2));
+  document.getElementById('calcResultS').textContent = '(' + totalS + 's)';
+}
+
+document.querySelectorAll('.calc-input').forEach(el => {
+  el.addEventListener('input', updateCalc);
+});
 
 // Initialize
 populateCategories();
