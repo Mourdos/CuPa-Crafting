@@ -276,6 +276,12 @@ const MAT = {
   'Nickel Wire': {i:{'Nickel Metal':1,'Charcoal':1}, y:3, wu:3},
   'Tin Wire':    {i:{'Tin Metal':1,'Charcoal':1}, y:3, wu:3},
   // Alchemy
+  // Adept workshops (used as inputs to upgrade recipes)
+  'Adept Artisan\'s Workshop':     {i:{'Metal (H)':2,'Metal (O)':5,'Wood (O)':2,'Charcoal':7,'Oil':2}, y:1, wu:40},
+  'Adept Blacksmith\'s Forge':     {i:{'Metal (H)':2,'Metal (O)':5,'Wood (O)':2,'Charcoal':7,'Oil':2}, y:1, wu:40},
+  'Adept Jeweller\'s Bench':       {i:{'Metal (H)':2,'Metal (O)':3,'Glass (O)':2,'Wood (O)':2,'Charcoal':7,'Oil':2}, y:1, wu:40},
+  'Adept Alchemist\'s Laboratory': {i:{'Metal (H)':2,'Glass (H)':4,'Wood (O)':2,'Charcoal':6,'Oil':2}, y:1, wu:40},
+  'Adept Surgeon\'s Bed':          {i:{'Metal (H)':1,'Metal (O)':3,'Cloth (O)':3,'Wood (O)':2,'Charcoal':4,'Oil':2}, y:1, wu:40},
   'Essence':     {i:{'Herb (any)':3,'Oil':1}, y:1, wu:1},
   'Essence of Agaric':      {i:{'Agaric':3,'Oil':1}, y:1, wu:1},
   'Essence of Amaranth':    {i:{'Amaranth':3,'Oil':1}, y:1, wu:1},
@@ -604,6 +610,27 @@ add('Essences & Humours','Cruor (wasteful)',{i:{'Blood':1},wu:1,size:'s'});
 add('Essences & Humours','Ichor (wasteful)',{i:{'Blood':1},wu:1,size:'s'});
 add('Essences & Humours','All 3 Humours (efficient)',{i:{'Blood':1},wu:4,y:1,size:'s'});
 
+// --- WORKSHOPS: ADEPT ---
+add('Workshops - Adept','Adept Artisan\'s Workshop',{i:{'Metal (H)':2,'Metal (O)':5,'Wood (O)':2,'Charcoal':7,'Oil':2},wu:40,size:'l'});
+add('Workshops - Adept','Adept Blacksmith\'s Forge',{i:{'Metal (H)':2,'Metal (O)':5,'Wood (O)':2,'Charcoal':7,'Oil':2},wu:40,size:'l'});
+add('Workshops - Adept','Adept Jeweller\'s Bench',{i:{'Metal (H)':2,'Metal (O)':3,'Glass (O)':2,'Wood (O)':2,'Charcoal':7,'Oil':2},wu:40,size:'l'});
+add('Workshops - Adept','Adept Alchemist\'s Laboratory',{i:{'Metal (H)':2,'Glass (H)':4,'Wood (O)':2,'Charcoal':6,'Oil':2},wu:40,size:'l'});
+add('Workshops - Adept','Adept Surgeon\'s Bed',{i:{'Metal (H)':1,'Metal (O)':3,'Cloth (O)':3,'Wood (O)':2,'Charcoal':4,'Oil':2},wu:40,size:'l'});
+
+// --- WORKSHOPS: UPGRADES (Adept -> Expert) ---
+add('Workshops - Upgrades','Upgrade to Expert Artisan\'s Workshop',{i:{'Adept Artisan\'s Workshop':1,'Metal (H)':7,'Wood (O)':1,'Charcoal':7,'Oil':1},wu:40,size:'l'});
+add('Workshops - Upgrades','Upgrade to Expert Blacksmith\'s Forge',{i:{'Adept Blacksmith\'s Forge':1,'Metal (H)':7,'Wood (O)':1,'Charcoal':7,'Oil':1},wu:40,size:'l'});
+add('Workshops - Upgrades','Upgrade to Expert Jeweller\'s Bench',{i:{'Adept Jeweller\'s Bench':1,'Metal (H)':4,'Glass (H)':2,'Glass (O)':2,'Wood (O)':1,'Charcoal':8,'Oil':1},wu:40,size:'l'});
+add('Workshops - Upgrades','Upgrade to Expert Alchemist\'s Laboratory',{i:{'Adept Alchemist\'s Laboratory':1,'Glass (H)':3,'Metal (H)':1,'Wood (O)':1,'Charcoal':4,'Oil':1},wu:40,size:'l'});
+add('Workshops - Upgrades','Upgrade to Expert Surgeon\'s Bed',{i:{'Adept Surgeon\'s Bed':1,'Metal (H)':5,'Cloth (O)':1,'Wood (O)':1,'Charcoal':5,'Oil':1},wu:40,size:'l'});
+
+// --- WORKSHOPS: EXPERT ---
+add('Workshops - Expert','Expert Artisan\'s Workshop',{i:{'Metal (H)':9,'Wood (O)':2,'Charcoal':9,'Oil':2},wu:70,size:'l'});
+add('Workshops - Expert','Expert Blacksmith\'s Forge',{i:{'Metal (H)':9,'Wood (O)':2,'Charcoal':9,'Oil':2},wu:70,size:'l'});
+add('Workshops - Expert','Expert Jeweller\'s Bench',{i:{'Metal (H)':6,'Glass (H)':2,'Glass (O)':3,'Wood (O)':2,'Charcoal':11,'Oil':2},wu:70,size:'l'});
+add('Workshops - Expert','Expert Alchemist\'s Laboratory',{i:{'Metal (H)':3,'Glass (H)':6,'Wood (O)':2,'Charcoal':9,'Oil':2},wu:70,size:'l'});
+add('Workshops - Expert','Expert Surgeon\'s Bed',{i:{'Metal (H)':6,'Cloth (O)':3,'Wood (O)':2,'Charcoal':6,'Oil':2},wu:70,size:'l'});
+
 // --- ALCHEMY: POTIONS (ENHANCING) ---
 add('Potions - Enhancing','Berserkergang',{i:{'Cumin Seeds':1,'Moonflower Seeds':1,'Oil':3},wu:4,size:'s'});
 add('Potions - Enhancing','Blessed Release',{i:{'Agrimony':1,'Master Wort':1,'Oil':3},wu:4,size:'s'});
@@ -757,6 +784,9 @@ const TYPES = {
   'Surgery': [
     'Surgery - Healing','Surgery - Grafts','Surgery - Tattoos'
   ],
+  'Workshops': [
+    'Workshops - Adept','Workshops - Expert','Workshops - Upgrades'
+  ],
 };
 
 // ============================================================
@@ -870,9 +900,9 @@ function updateJewelVisibility() {
   grpJewel.style.display = needsJewel ? '' : 'none';
 }
 
-selType.addEventListener('change', populateCategories);
-selCat.addEventListener('change', populateItems);
-selItem.addEventListener('change', updateUI);
+selType.addEventListener('change', () => { ownedItems.clear(); populateCategories(); });
+selCat.addEventListener('change', () => { ownedItems.clear(); populateItems(); });
+selItem.addEventListener('change', () => { ownedItems.clear(); updateUI(); });
 numQty.addEventListener('input', rebuildTree);
 chkOrnate.addEventListener('change', () => { updateOrnateOptions(); updateJewelVisibility(); rebuildTree(); });
 selOrnate.addEventListener('change', () => { updateJewelVisibility(); rebuildTree(); });
@@ -957,6 +987,7 @@ document.addEventListener('click', (e) => {
 });
 
 function selectSearchResult(m) {
+  ownedItems.clear();
   // Set the type, category, and item dropdowns to match
   selType.value = m.type;
   populateCategories();
@@ -983,21 +1014,29 @@ function resolveJewel(inputs) {
   return resolved;
 }
 
-function buildTree(name, needed) {
+// Owned items - user has these, skip the sub-tree (resets on reload)
+const ownedItems = new Set();
+
+function buildTree(name, needed, path) {
+  // Owned: treat as leaf, no WU, not counted as raw
+  if(ownedItems.has(path)) {
+    return { name, needed, produced: needed, surplus:0, wu:0, isRaw:false, isOwned:true, path, children:[] };
+  }
   const recipe = MAT[name];
   if(!recipe) {
-    // Raw material (leaf node)
-    return { name, needed, produced: needed, surplus:0, wu:0, isRaw:true, children:[] };
+    return { name, needed, produced: needed, surplus:0, wu:0, isRaw:true, path, children:[] };
   }
   const batches = Math.ceil(needed / recipe.y);
   const produced = batches * recipe.y;
   const surplus = produced - needed;
   const wu = recipe.wu * batches;
   const children = [];
+  let i = 0;
   for(const [mat, qtyPer] of Object.entries(recipe.i)) {
-    children.push(buildTree(mat, qtyPer * batches));
+    children.push(buildTree(mat, qtyPer * batches, path + '.' + i));
+    i++;
   }
-  return { name, needed, produced, surplus, wu, batches, isRaw:false, children };
+  return { name, needed, produced, surplus, wu, batches, isRaw:false, path, children };
 }
 
 function buildDesignTree() {
@@ -1052,8 +1091,10 @@ function buildDesignTree() {
 
   // Build children trees for each input
   const children = [];
+  let ci = 0;
   for(const [mat, total] of Object.entries(scaledInputs)) {
-    children.push(buildTree(mat, total));
+    children.push(buildTree(mat, total, 'r.' + ci));
+    ci++;
   }
 
   return {
@@ -1099,10 +1140,27 @@ function formatCurrency(copper) {
 // ============================================================
 function renderNode(node, isLast) {
   const div = document.createElement('div');
-  div.className = 'tree-node' + (node.isRaw ? ' node-raw' : '') + (node.isRoot ? ' node-root' : '');
+  div.className = 'tree-node' + (node.isRaw ? ' node-raw' : '') + (node.isRoot ? ' node-root' : '') + (node.isOwned ? ' node-owned' : '');
 
   const row = document.createElement('div');
   row.className = 'node-row';
+  if(!node.isRoot) {
+    row.style.cursor = 'pointer';
+    row.title = node.isOwned ? 'Click to unmark as owned' : 'Click to mark as owned (skip pre-reqs)';
+    row.addEventListener('click', () => {
+      if(ownedItems.has(node.path)) ownedItems.delete(node.path);
+      else ownedItems.add(node.path);
+      rebuildTree();
+    });
+  }
+
+  if(node.isOwned) {
+    const check = document.createElement('span');
+    check.textContent = '\u2713';
+    check.style.color = '#5cb85c';
+    check.style.fontWeight = '700';
+    row.appendChild(check);
+  }
 
   const qtySpan = document.createElement('span');
   qtySpan.className = 'node-qty';
@@ -1112,6 +1170,7 @@ function renderNode(node, isLast) {
   const nameSpan = document.createElement('span');
   nameSpan.className = 'node-name';
   nameSpan.textContent = node.name;
+  if(node.isOwned) nameSpan.style.textDecoration = 'line-through';
   row.appendChild(nameSpan);
 
   // Rarity tag
@@ -1123,7 +1182,16 @@ function renderNode(node, isLast) {
     row.appendChild(tag);
   }
 
-  if(!node.isRaw && node.wu > 0) {
+  if(node.isOwned) {
+    const owned = document.createElement('span');
+    owned.style.fontSize = '.75rem';
+    owned.style.color = '#5cb85c';
+    owned.style.fontStyle = 'italic';
+    owned.textContent = 'have it';
+    row.appendChild(owned);
+  }
+
+  if(!node.isRaw && !node.isOwned && node.wu > 0) {
     const wuSpan = document.createElement('span');
     wuSpan.className = 'node-wu';
     wuSpan.textContent = node.wu + ' WU';
