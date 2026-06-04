@@ -114,6 +114,10 @@ main{flex:1;display:flex;gap:0;overflow:hidden}
       </select>
     </div>
     <div class="checkbox-group">
+      <input type="checkbox" id="chkStd">
+      <label for="chkStd" title="Half WU (rounded up), all (H) materials become (O). Standard items cannot be enchanted or ornated.">Standard quality</label>
+    </div>
+    <div class="checkbox-group">
       <input type="checkbox" id="chkOrnate">
       <label for="chkOrnate">Ornate</label>
     </div>
@@ -221,6 +225,9 @@ const RARITY = {
   'Red Agate':'U','Sage Quartz':'U',
   // Surgery
   'Claw':'C','Bandage':'C',
+  // Ornating / special materials
+  'Platinum Ingot':'R',
+  'Blue Dye':'VC','Red Dye':'VC','Green Dye':'VC',
 };
 
 // Price in copper per unit (4c = 1s, 4s = 1g)
@@ -231,15 +238,15 @@ const PRICE_COPPER = { 'VC': 8/9, 'C': 8/3, 'U': 8, 'R': 24 };
 // ============================================================
 const MAT = {
   // Passive ingredients (yield 3)
-  'Cream':     {i:{'Oil':1}, y:3, wu:1},
-  'Fluid':     {i:{'Oil':1}, y:3, wu:1},
+  'Cream':     {i:{'Herb (any)':1}, y:3, wu:1},
+  'Fluid':     {i:{'Herb (any)':1}, y:3, wu:1},
   'Ink':       {i:{'Charcoal':1}, y:3, wu:1},
   'Oil':       {i:{'Herb (any)':1}, y:3, wu:1},
   'Powder':    {i:{'Herb (any)':1}, y:3, wu:1},
   'Powdered Dye':{i:{'Herb (any)':1}, y:3, wu:1},
   // Passive materials (yield 3)
-  'Ash':       {i:{'Timber':1}, y:3, wu:1},
-  'Charcoal':  {i:{'Timber':1}, y:3, wu:1},
+  'Ash':       {i:{'Wood (O)':1}, y:3, wu:1},
+  'Charcoal':  {i:{'Wood (O)':1}, y:3, wu:1},
   'Powdered Bone':    {i:{'Bone (O)':1}, y:3, wu:1},
   'Powdered Gemstone':{i:{'Gem (any)':1}, y:3, wu:1},
   'Powdered Metal':   {i:{'Metal (O)':1}, y:3, wu:1},
@@ -277,11 +284,11 @@ const MAT = {
   'Tin Wire':    {i:{'Tin Metal':1,'Charcoal':1}, y:3, wu:3},
   // Alchemy
   // Adept workshops (used as inputs to upgrade recipes)
-  'Adept Artisan\'s Workshop':     {i:{'Metal (H)':2,'Metal (O)':5,'Wood (O)':2,'Charcoal':7,'Oil':2}, y:1, wu:40},
-  'Adept Blacksmith\'s Forge':     {i:{'Metal (H)':2,'Metal (O)':5,'Wood (O)':2,'Charcoal':7,'Oil':2}, y:1, wu:40},
-  'Adept Jeweller\'s Bench':       {i:{'Metal (H)':2,'Metal (O)':3,'Glass (O)':2,'Wood (O)':2,'Charcoal':7,'Oil':2}, y:1, wu:40},
-  'Adept Alchemist\'s Laboratory': {i:{'Metal (H)':2,'Glass (H)':4,'Wood (O)':2,'Charcoal':6,'Oil':2}, y:1, wu:40},
-  'Adept Surgeon\'s Bed':          {i:{'Metal (H)':1,'Metal (O)':3,'Cloth (O)':3,'Wood (O)':2,'Charcoal':4,'Oil':2}, y:1, wu:40},
+  'Adept Artisan\'s Workshop':     {i:{'Wood (O)':4,'Metal (H)':2,'Metal (O)':2,'Charcoal':1,'Oil':1}, y:1, wu:40},
+  'Adept Blacksmith\'s Forge':     {i:{'Wood (O)':2,'Metal (H)':2,'Metal (O)':4,'Charcoal':2,'Oil':1}, y:1, wu:40},
+  'Adept Jeweller\'s Bench':       {i:{'Wood (O)':2,'Metal (H)':2,'Metal (O)':2,'Glass (O)':2,'Charcoal':2,'Oil':1}, y:1, wu:40},
+  'Adept Alchemist\'s Laboratory': {i:{'Wood (O)':2,'Metal (H)':2,'Charcoal':2,'Oil':1,'Glass (O)':4}, y:1, wu:40},
+  'Adept Surgeon\'s Bed':          {i:{'Wood (O)':2,'Cloth (O)':4,'Metal (H)':2,'Charcoal':1,'Oil':1}, y:1, wu:40},
   'Essence':     {i:{'Herb (any)':3,'Oil':1}, y:1, wu:1},
   'Essence of Agaric':      {i:{'Agaric':3,'Oil':1}, y:1, wu:1},
   'Essence of Amaranth':    {i:{'Amaranth':3,'Oil':1}, y:1, wu:1},
@@ -307,262 +314,212 @@ function add(cat, name, props) {
   D[cat].push({name, ...props});
 }
 
+// All Crafting Designs recipes are Mastercrafted by default (wiki update 31 May 2026).
+// Standard quality = half WU (rounded up) + all (H) materials become (O),
+// handled dynamically via the "Standard quality" checkbox.
+
 // --- ARMOUR - LIGHT (per location) ---
-add('Armour - Light','Padded Cloth Armour',{i:{'Cloth (H)':4},wu:16,size:'loc',ocat:'armour'});
-add('Armour - Light','Hide Armour',{i:{'Hide':12},wu:18,size:'loc',ocat:'armour'});
-add('Armour - Light','Leather Armour',{i:{'Leather (H)':4,'Oil':4},wu:19,size:'loc',ocat:'armour'});
+add('Armour - Light','Hide Armour',{i:{'Hide':6},wu:16,size:'loc'});
+add('Armour - Light','Leather Armour',{i:{'Leather (H)':2,'Oil':1},wu:16,size:'loc'});
+add('Armour - Light','Padded Cloth Armour',{i:{'Cloth (H)':2},wu:16,size:'loc'});
 
 // --- ARMOUR - MEDIUM ---
-add('Armour - Medium','Light Chain/Ring Armour',{i:{'Metal (H)':4,'Charcoal':4},wu:23,size:'loc',ocat:'armour'});
-add('Armour - Medium','Studded Padded Cloth Armour',{i:{'Cloth (H)':4,'Metal (H)':2,'Charcoal':2},wu:25,size:'loc',ocat:'armour'});
-add('Armour - Medium','Studded Leather Armour',{i:{'Leather (H)':4,'Metal (H)':2,'Charcoal':2,'Oil':4},wu:26,size:'loc',ocat:'armour'});
+add('Armour - Medium','Light Chain/Ring Armour',{i:{'Metal (H)':4,'Charcoal':1},wu:20,size:'loc'});
+add('Armour - Medium','Studded Padded Cloth Armour',{i:{'Cloth (H)':3,'Metal (H)':1,'Charcoal':1},wu:20,size:'loc'});
+add('Armour - Medium','Studded Leather Armour',{i:{'Leather (H)':3,'Metal (H)':1,'Charcoal':1,'Oil':1},wu:20,size:'loc'});
 
 // --- ARMOUR - HEAVY ---
-add('Armour - Heavy','Heavy Chain Armour',{i:{'Metal (H)':8,'Charcoal':8},wu:30,size:'loc',ocat:'armour'});
-add('Armour - Heavy','Plate Armour',{i:{'Metal (H)':8,'Charcoal':8},wu:32,size:'loc',ocat:'armour',plateLeather:true});
+add('Armour - Heavy','Heavy Chain Armour',{i:{'Metal (H)':6,'Charcoal':2},wu:24,size:'loc'});
+add('Armour - Heavy','Plate Armour',{i:{'Metal (H)':6,'Charcoal':2},wu:24,size:'loc',plateLeather:true});
 
 // --- SHIELDS ---
-add('Armour - Shields','Metal Shield',{i:{'Metal (H)':2,'Charcoal':2},wu:11,size:'s',ocat:'armour'});
-add('Armour - Shields','Wooden Shield',{i:{'Wood (H)':2,'Oil':2},wu:11,size:'s',ocat:'armour'});
+add('Armour - Shields','Metal Small Shield',{i:{'Metal (H)':2,'Charcoal':1},wu:12,size:'s'});
+add('Armour - Shields','Metal Great Shield',{i:{'Metal (H)':4,'Charcoal':1},wu:16,size:'s'});
+add('Armour - Shields','Wooden Small Shield',{i:{'Wood (H)':2,'Oil':1},wu:12,size:'s'});
+add('Armour - Shields','Wooden Great Shield',{i:{'Wood (H)':4,'Oil':1},wu:16,size:'s'});
 
 // --- ARMOUR STAPLES ---
 add('Armour - Misc','Armour Staple (x3)',{i:{'Metal (O)':1,'Charcoal':1},wu:3,y:3,size:'s'});
 
-// --- CLOTHING SMALL STANDARD ---
-add('Clothing - Small (Std)','Boots',{i:{'Leather (O)':2,'Oil':2},wu:4,size:'s',ocat:'clothing'});
-add('Clothing - Small (Std)','Gloves/Bracers (cloth)',{i:{'Cloth (O)':2,'Oil':2},wu:2,size:'s',ocat:'clothing'});
-add('Clothing - Small (Std)','Gloves/Bracers (leather)',{i:{'Leather (O)':2,'Oil':2},wu:2,size:'s',ocat:'clothing'});
-add('Clothing - Small (Std)','Hat (cloth)',{i:{'Cloth (O)':1,'Fluid':1},wu:4,size:'s',ocat:'clothing'});
-add('Clothing - Small (Std)','Hat (leather)',{i:{'Leather (O)':1,'Oil':1},wu:4,size:'s',ocat:'clothing'});
-add('Clothing - Small (Std)','Mask/Headband (leather)',{i:{'Leather (O)':1,'Oil':1},wu:2,size:'s',ocat:'clothing'});
-add('Clothing - Small (Std)','Mask/Headband (wood)',{i:{'Wood (O)':1,'Oil':1},wu:2,size:'s',ocat:'clothing'});
-add('Clothing - Small (Std)','Sash',{i:{'Cloth (O)':1},wu:3,size:'s',ocat:'clothing'});
-add('Clothing - Small (Std)','Shoes',{i:{'Leather (O)':1,'Oil':1},wu:2,size:'s',ocat:'clothing'});
+// --- CLOTHING ---
+add('Clothing - Footwear','Leather Boots',{i:{'Leather (H)':2,'Oil':1},wu:12,size:'s'});
+add('Clothing - Footwear','Leather Shoes',{i:{'Leather (H)':2,'Oil':1},wu:12,size:'s'});
+add('Clothing - Bracers & Gloves','Cloth Bracers',{i:{'Cloth (H)':2},wu:6,size:'s'});
+add('Clothing - Bracers & Gloves','Cloth Gloves',{i:{'Cloth (H)':2},wu:12,size:'s'});
+add('Clothing - Bracers & Gloves','Leather Bracers',{i:{'Leather (H)':2,'Oil':1},wu:6,size:'s'});
+add('Clothing - Bracers & Gloves','Leather Gloves',{i:{'Leather (H)':2,'Oil':1},wu:12,size:'s'});
+add('Clothing - Hats','Cloth Hat',{i:{'Cloth (H)':2},wu:8,size:'s'});
+add('Clothing - Hats','Leather Hat',{i:{'Leather (H)':2,'Oil':1},wu:8,size:'s'});
+add('Clothing - Masks & Headbands','Cloth Headband',{i:{'Cloth (H)':1},wu:4,size:'s'});
+add('Clothing - Masks & Headbands','Leather Headband',{i:{'Leather (H)':1,'Oil':1},wu:4,size:'s'});
+add('Clothing - Masks & Headbands','Leather Mask',{i:{'Leather (H)':2,'Oil':1},wu:8,size:'s'});
+add('Clothing - Masks & Headbands','Metal Headband',{i:{'Metal (H)':1,'Charcoal':1},wu:4,size:'s'});
+add('Clothing - Masks & Headbands','Metal Mask',{i:{'Metal (H)':2,'Charcoal':1},wu:8,size:'s'});
+add('Clothing - Masks & Headbands','Wooden Headband',{i:{'Wood (H)':1,'Oil':1},wu:4,size:'s'});
+add('Clothing - Masks & Headbands','Wooden Mask',{i:{'Wood (H)':2,'Oil':1},wu:8,size:'s'});
+add('Clothing - Shirts & Sashes','Cloth Sash',{i:{'Cloth (H)':2},wu:6,size:'s'});
+add('Clothing - Shirts & Sashes','Cloth Shirt',{i:{'Cloth (H)':2},wu:10,size:'l'});
+add('Clothing - Cloaks & Tabards','Cloth Cloak',{i:{'Cloth (H)':3},wu:10,size:'l'});
+add('Clothing - Cloaks & Tabards','Cloth Tabard',{i:{'Cloth (H)':2},wu:6,size:'l'});
+add('Clothing - Cloaks & Tabards','Leather Cloak',{i:{'Leather (H)':3,'Oil':1},wu:10,size:'l'});
+add('Clothing - Dresses & Robes','Cloth Dress',{i:{'Cloth (H)':3},wu:16,size:'l'});
+add('Clothing - Dresses & Robes','Cloth Robes',{i:{'Cloth (H)':3},wu:14,size:'l'});
+add('Clothing - Trousers & Belts','Cloth Belt',{i:{'Cloth (H)':1},wu:4,size:'s'});
+add('Clothing - Trousers & Belts','Cloth Trousers',{i:{'Cloth (H)':2},wu:6,size:'l'});
+add('Clothing - Trousers & Belts','Leather Belt',{i:{'Leather (H)':1,'Oil':1},wu:4,size:'s'});
+add('Clothing - Kilts','Kilt',{i:{'Cloth (H)':2},wu:6,size:'l'});
+add('Clothing - Kilts','High Kilt',{i:{'Cloth (H)':4},wu:10,size:'l'});
 
-// --- CLOTHING SMALL MASTERCRAFTED ---
-add('Clothing - Small (MC)','MC Boots',{i:{'Leather (H)':3,'Oil':3},wu:14,size:'s',ocat:'clothing'});
-add('Clothing - Small (MC)','MC Gloves/Bracers (cloth)',{i:{'Cloth (H)':2,'Oil':2},wu:7,size:'s',ocat:'clothing'});
-add('Clothing - Small (MC)','MC Gloves/Bracers (leather)',{i:{'Leather (H)':2,'Oil':2},wu:7,size:'s',ocat:'clothing'});
-add('Clothing - Small (MC)','MC Hat (cloth)',{i:{'Cloth (H)':2,'Fluid':2},wu:14,size:'s',ocat:'clothing'});
-add('Clothing - Small (MC)','MC Hat (leather)',{i:{'Leather (H)':2,'Oil':2},wu:14,size:'s',ocat:'clothing'});
-add('Clothing - Small (MC)','MC Mask/Headband (leather)',{i:{'Leather (H)':2,'Oil':2},wu:7,size:'s',ocat:'clothing'});
-add('Clothing - Small (MC)','MC Mask/Headband (wood)',{i:{'Wood (H)':2,'Oil':2},wu:7,size:'s',ocat:'clothing'});
-add('Clothing - Small (MC)','MC Sash',{i:{'Cloth (H)':2},wu:10,size:'s',ocat:'clothing'});
-add('Clothing - Small (MC)','MC Shoes',{i:{'Leather (H)':2,'Oil':2},wu:7,size:'s',ocat:'clothing'});
+// --- COMMON ITEMS ---
+add('Common Items','Backpack',{i:{'Leather (H)':2,'Oil':1},wu:8,size:'s'});
+add('Common Items','Banner',{i:{'Cloth (H)':2},wu:6,size:'l'});
+add('Common Items','Book',{i:{'Leather (H)':1,'Paper (H)':5,'Oil':1},wu:20,size:'s'});
+add('Common Items','Bowl/Plate (clay)',{i:{'Clay':3,'Charcoal':1},wu:4,size:'s'});
+add('Common Items','Bowl/Plate (metal)',{i:{'Metal (H)':1,'Charcoal':1},wu:4,size:'s'});
+add('Common Items','Bowl/Plate (wood)',{i:{'Wood (H)':1,'Oil':1},wu:4,size:'s'});
+add('Common Items','Small Box/Chest',{i:{'Wood (H)':2,'Metal (H)':1,'Oil':1,'Charcoal':1},wu:12,size:'s'});
+add('Common Items','Large Box/Chest',{i:{'Wood (H)':4,'Metal (H)':2,'Oil':1,'Charcoal':1},wu:16,size:'l'});
+add('Common Items','Candle Holder (clay)',{i:{'Clay':3,'Charcoal':1},wu:4,size:'s'});
+add('Common Items','Candle Holder (metal)',{i:{'Metal (H)':1,'Charcoal':1},wu:4,size:'s'});
+add('Common Items','Candle Holder (wood)',{i:{'Wood (H)':1,'Oil':1},wu:4,size:'s'});
+add('Common Items','Chair/Throne (stone)',{i:{'Stone (H)':4,'Sand':1},wu:10,size:'l'});
+add('Common Items','Chair/Throne (wood)',{i:{'Wood (H)':4,'Oil':1},wu:10,size:'l'});
+add('Common Items','Cup (clay)',{i:{'Clay':3,'Charcoal':1},wu:4,size:'s'});
+add('Common Items','Cup (metal)',{i:{'Metal (H)':1,'Charcoal':1},wu:4,size:'s'});
+add('Common Items','Cup (wood)',{i:{'Wood (H)':1,'Oil':1},wu:4,size:'s'});
+add('Common Items','Doll/Toy (cloth)',{i:{'Cloth (H)':1,'Fleece':2},wu:6,size:'s'});
+add('Common Items','Doll/Toy (wood)',{i:{'Wood (H)':1,'Hide':2},wu:6,size:'s'});
+add('Common Items','Drinking Horn',{i:{'Bone (H)':2,'Sand':1},wu:6,size:'s'});
+add('Common Items','Glass Vial',{i:{'Glass (H)':1,'Charcoal':1},wu:1,size:'s'});
+add('Common Items','Goblet (clay)',{i:{'Clay':3,'Charcoal':1},wu:4,size:'s'});
+add('Common Items','Goblet (metal)',{i:{'Metal (H)':1,'Charcoal':1},wu:4,size:'s'});
+add('Common Items','Hourglass',{i:{'Wood (H)':1,'Glass (H)':1,'Oil':1,'Charcoal':1},wu:16,size:'s'});
+add('Common Items','Lantern',{i:{'Metal (H)':1,'Glass (H)':1,'Charcoal':1},wu:8,size:'s'});
+add('Common Items','Manacles',{i:{'Metal (H)':2,'Charcoal':1},wu:12,size:'s'});
+add('Common Items','Mirror',{i:{'Metal (H)':1,'Glass (H)':1,'Charcoal':1,'Silver Metal':1},wu:14,size:'s'});
+add('Common Items','Pen',{i:{'Wood (H)':1,'Metal (O)':1,'Oil':1,'Charcoal':1},wu:4,size:'s'});
+add('Common Items','Scabbard',{i:{'Leather (H)':2,'Metal (O)':1,'Oil':1,'Charcoal':1},wu:10,size:'s'});
+add('Common Items','Set of Coloured Lens',{i:{'Glass (H)':3,'Charcoal':1,'Blue Dye':1,'Red Dye':1,'Green Dye':1},wu:10,size:'s'});
+add('Common Items','Spectacles',{i:{'Glass (H)':2,'Metal (H)':1,'Charcoal':1},wu:18,size:'s'});
+add('Common Items','Coffee Table',{i:{'Wood (H)':4,'Oil':1},wu:8,size:'l'});
+add('Common Items','Large Table',{i:{'Wood (H)':8,'Metal (O)':2,'Oil':2,'Charcoal':1},wu:16,size:'l'});
+add('Common Items','Wand (bone)',{i:{'Bone (H)':1,'Sand':1},wu:6,size:'s'});
+add('Common Items','Wand (wooden)',{i:{'Wood (H)':1,'Oil':1},wu:6,size:'s'});
+add('Common Items','Wax Seal',{i:{'Metal (H)':1,'Charcoal':1},wu:6,size:'s'});
+add('Common Items','Tinderbox',{i:{'Metal (H)':1,'Fleece':1,'Rock':1,'Timber':1},wu:8,size:'s'});
 
-// --- CLOTHING LARGE STANDARD ---
-add('Clothing - Large (Std)','Cloak (cloth)',{i:{'Cloth (O)':2,'Oil':2},wu:3,size:'l',ocat:'clothing'});
-add('Clothing - Large (Std)','Cloak (leather)',{i:{'Leather (O)':2,'Oil':2},wu:3,size:'l',ocat:'clothing'});
-add('Clothing - Large (Std)','Dress',{i:{'Cloth (O)':2},wu:3,size:'l',ocat:'clothing'});
-add('Clothing - Large (Std)','Robes',{i:{'Cloth (O)':3},wu:4,size:'l',ocat:'clothing'});
-add('Clothing - Large (Std)','Shirt',{i:{'Cloth (O)':2},wu:2,size:'l',ocat:'clothing'});
-add('Clothing - Large (Std)','Trousers',{i:{'Cloth (O)':2},wu:2,size:'l',ocat:'clothing'});
+// --- JEWELLERY (metal = copper/silver/gold only) ---
+add('Jewellery - Metal','Bracelet (metal)',{i:{'@jewel':1,'Charcoal':1},wu:14,size:'s',jewel:true});
+add('Jewellery - Metal','Brooch (metal)',{i:{'@jewel':1,'Charcoal':1},wu:14,size:'s',jewel:true});
+add('Jewellery - Metal','Circlet/Torc (metal)',{i:{'@jewel':2,'Charcoal':1},wu:12,size:'s',jewel:true});
+add('Jewellery - Metal','Crown (metal)',{i:{'@jewel':2,'Charcoal':1},wu:20,size:'s',jewel:true});
+add('Jewellery - Metal','Tiara (metal)',{i:{'@jewel':2,'Charcoal':1},wu:18,size:'s',jewel:true});
+add('Jewellery - Metal','Pendant/Necklace (metal)',{i:{'@jewel':1,'Charcoal':1},wu:16,size:'s',jewel:true});
+add('Jewellery - Metal','Ring/Earring (metal)',{i:{'@jewel':1,'Charcoal':1},wu:14,size:'s',jewel:true});
+add('Jewellery - Wood','Bracelet (wood)',{i:{'Wood (H)':2,'Oil':1},wu:18,size:'s'});
+add('Jewellery - Wood','Brooch (wood)',{i:{'Wood (H)':2,'Oil':1},wu:18,size:'s'});
+add('Jewellery - Wood','Circlet/Torc (wood)',{i:{'Wood (H)':3,'Oil':1},wu:16,size:'s'});
+add('Jewellery - Wood','Crown (wood)',{i:{'Wood (H)':3,'Oil':1},wu:24,size:'s'});
+add('Jewellery - Wood','Tiara (wood)',{i:{'Wood (H)':3,'Oil':1},wu:22,size:'s'});
+add('Jewellery - Wood','Pendant/Necklace (wood)',{i:{'Wood (H)':2,'Oil':1},wu:20,size:'s'});
+add('Jewellery - Wood','Ring/Earring (wood)',{i:{'Wood (H)':2,'Oil':1},wu:18,size:'s'});
+add('Jewellery - Bone','Bracelet (bone)',{i:{'Bone (H)':2,'Sand':1},wu:18,size:'s'});
+add('Jewellery - Bone','Brooch (bone)',{i:{'Bone (H)':2,'Sand':1},wu:18,size:'s'});
+add('Jewellery - Bone','Circlet/Torc (bone)',{i:{'Bone (H)':3,'Sand':1},wu:16,size:'s'});
+add('Jewellery - Bone','Crown (bone)',{i:{'Bone (H)':3,'Sand':1},wu:24,size:'s'});
+add('Jewellery - Bone','Tiara (bone)',{i:{'Bone (H)':3,'Sand':1},wu:22,size:'s'});
+add('Jewellery - Bone','Pendant/Necklace (bone)',{i:{'Bone (H)':2,'Sand':1},wu:20,size:'s'});
+add('Jewellery - Bone','Ring/Earring (bone)',{i:{'Bone (H)':2,'Sand':1},wu:18,size:'s'});
 
-// --- CLOTHING LARGE MASTERCRAFTED ---
-add('Clothing - Large (MC)','MC Cloak (cloth)',{i:{'Cloth (H)':2,'Oil':2},wu:11,size:'l',ocat:'clothing'});
-add('Clothing - Large (MC)','MC Cloak (leather)',{i:{'Leather (H)':2,'Oil':2},wu:11,size:'l',ocat:'clothing'});
-add('Clothing - Large (MC)','MC Dress',{i:{'Cloth (H)':2},wu:9,size:'l',ocat:'clothing'});
-add('Clothing - Large (MC)','MC Robes',{i:{'Cloth (H)':3},wu:14,size:'l',ocat:'clothing'});
-add('Clothing - Large (MC)','MC Shirt',{i:{'Cloth (H)':2},wu:7,size:'l',ocat:'clothing'});
-add('Clothing - Large (MC)','MC Trousers',{i:{'Cloth (H)':2},wu:7,size:'l',ocat:'clothing'});
-
-// --- COMMON ITEMS STANDARD ---
-add('Common Items (Std)','Backpack',{i:{'Leather (H)':1,'Leather (O)':1,'Oil':2},wu:4,size:'s',ocat:'common'});
-add('Common Items (Std)','Bowl/Plate (clay)',{i:{'Clay':3,'Charcoal':1},wu:2,size:'s',ocat:'common'});
-add('Common Items (Std)','Bowl/Plate (wood)',{i:{'Wood (H)':1,'Oil':1},wu:2,size:'s',ocat:'common'});
-add('Common Items (Std)','Small Box/Chest',{i:{'Wood (O)':2,'Metal (O)':1,'Oil':2,'Charcoal':1},wu:8,size:'s',ocat:'common'});
-add('Common Items (Std)','Large Box/Chest',{i:{'Wood (O)':6,'Metal (O)':3,'Oil':6,'Charcoal':3},wu:12,size:'l',ocat:'common'});
-add('Common Items (Std)','Candle (x3)',{i:{'Wax':1},wu:1,y:3,size:'s'});
-add('Common Items (Std)','Candle Holder (clay)',{i:{'Clay':3,'Charcoal':1},wu:2,size:'s',ocat:'common'});
-add('Common Items (Std)','Candle Holder (metal)',{i:{'Metal (O)':1,'Charcoal':1},wu:2,size:'s',ocat:'common'});
-add('Common Items (Std)','Candle Holder (lead)',{i:{'Lead Metal':1,'Charcoal':1},wu:2,size:'s',ocat:'common'});
-add('Common Items (Std)','Chair/Throne (wood)',{i:{'Wood (H)':2,'Wood (O)':2,'Oil':4},wu:5,size:'l',ocat:'common'});
-add('Common Items (Std)','Chair/Throne (stone)',{i:{'Stone (H)':2,'Stone (O)':2,'Sand':4},wu:5,size:'l',ocat:'common'});
-add('Common Items (Std)','Cup (clay)',{i:{'Clay':3,'Charcoal':1},wu:2,size:'s',ocat:'common'});
-add('Common Items (Std)','Cup (wood)',{i:{'Wood (O)':1,'Oil':1},wu:2,size:'s',ocat:'common'});
-add('Common Items (Std)','Cup (metal)',{i:{'Metal (O)':1,'Charcoal':1},wu:2,size:'s',ocat:'common'});
-add('Common Items (Std)','Doll',{i:{'Cloth (O)':1},wu:4,size:'s',ocat:'common'});
-add('Common Items (Std)','Drinking Horn',{i:{'Bone (O)':1,'Sand':1},wu:4,size:'s',ocat:'common'});
-add('Common Items (Std)','Glass Vial',{i:{'Glass (O)':1},wu:3,size:'s',ocat:'common'});
-add('Common Items (Std)','Goblet (clay)',{i:{'Clay':6,'Charcoal':2},wu:4,size:'s',ocat:'common'});
-add('Common Items (Std)','Goblet (metal)',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:4,size:'s',ocat:'common'});
-add('Common Items (Std)','Hourglass',{i:{'Wood (O)':1,'Glass (O)':2,'Oil':1,'Charcoal':2},wu:12,size:'s',ocat:'common'});
-add('Common Items (Std)','Lantern',{i:{'Metal (O)':1,'Glass (O)':2,'Charcoal':3},wu:6,size:'s',ocat:'common'});
-add('Common Items (Std)','Manacles',{i:{'Metal (H)':1,'Metal (O)':2,'Charcoal':3},wu:11,size:'s',ocat:'common'});
-add('Common Items (Std)','Mirror',{i:{'Metal (H)':1,'Glass (O)':1,'Charcoal':2},wu:9,size:'s',ocat:'common'});
-add('Common Items (Std)','Pen',{i:{'Wood (H)':1,'Oil':1},wu:2,size:'s',ocat:'common'});
-add('Common Items (Std)','Scabbard',{i:{'Leather (H)':2,'Oil':2},wu:4,size:'s',ocat:'common'});
-add('Common Items (Std)','Spectacles',{i:{'Glass (H)':1,'Metal (O)':1,'Charcoal':2},wu:14,size:'s',ocat:'common'});
-add('Common Items (Std)','Coffee Table',{i:{'Wood (H)':4,'Wood (O)':4,'Oil':8},wu:6,size:'l',ocat:'common'});
-add('Common Items (Std)','Large Table',{i:{'Wood (H)':8,'Wood (O)':8,'Metal (O)':2,'Oil':16,'Charcoal':2},wu:12,size:'l',ocat:'common'});
-add('Common Items (Std)','Toy',{i:{'Wood (H)':1,'Metal (O)':1,'Oil':1,'Charcoal':1},wu:4,size:'s',ocat:'common'});
-add('Common Items (Std)','Wax Seal',{i:{'Metal (H)':1,'Wood (O)':1,'Oil':1,'Charcoal':1},wu:8,size:'s',ocat:'common'});
-add('Common Items (Std)','Tinderbox',{i:{'Metal (O)':1,'Fleece':1,'Rock':1,'Timber':1},wu:6,size:'s',ocat:'common'});
-
-// --- COMMON ITEMS MASTERCRAFTED ---
-add('Common Items (MC)','MC Backpack',{i:{'Leather (H)':2,'Oil':2},wu:8,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Bowl/Plate (clay)',{i:{'Clay':6,'Charcoal':2},wu:4,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Bowl/Plate (wood)',{i:{'Wood (H)':2,'Oil':2},wu:4,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Small Box/Chest',{i:{'Wood (H)':2,'Metal (H)':1,'Oil':2,'Charcoal':1},wu:15,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Large Box/Chest',{i:{'Wood (H)':6,'Metal (H)':3,'Oil':6,'Charcoal':3},wu:21,size:'l',ocat:'common'});
-add('Common Items (MC)','MC Candle Holder (clay)',{i:{'Clay':6,'Charcoal':2},wu:4,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Candle Holder (metal)',{i:{'Metal (H)':1,'Charcoal':1},wu:4,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Candle Holder (silver)',{i:{'Silver Metal':1,'Charcoal':1},wu:4,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Chair/Throne (wood)',{i:{'Wood (H)':4,'Oil':4},wu:10,size:'l',ocat:'common'});
-add('Common Items (MC)','MC Chair/Throne (stone)',{i:{'Stone (H)':4,'Sand':4},wu:10,size:'l',ocat:'common'});
-add('Common Items (MC)','MC Cup (clay)',{i:{'Clay':6,'Charcoal':1},wu:4,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Cup (wood)',{i:{'Wood (H)':1,'Wood (O)':1,'Oil':2},wu:4,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Cup (metal)',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:4,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Doll',{i:{'Cloth (H)':1},wu:7,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Drinking Horn',{i:{'Bone (H)':1,'Sand':1},wu:7,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Glass Vial',{i:{'Glass (H)':1},wu:5,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Goblet (clay)',{i:{'Clay':9,'Charcoal':2},wu:7,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Goblet (metal)',{i:{'Metal (H)':2,'Charcoal':2},wu:7,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Hourglass',{i:{'Wood (H)':1,'Glass (H)':2,'Oil':1,'Charcoal':2},wu:21,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Lantern',{i:{'Metal (H)':1,'Glass (H)':2,'Charcoal':3},wu:11,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Manacles',{i:{'Metal (H)':3,'Charcoal':3},wu:19,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Mirror',{i:{'Silver Metal':1,'Metal (H)':1,'Glass (H)':1,'Charcoal':3},wu:16,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Pen',{i:{'Wood (H)':1,'Metal (O)':1,'Oil':1,'Charcoal':1},wu:4,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Scabbard',{i:{'Leather (H)':2,'Metal (O)':1,'Oil':2,'Charcoal':1},wu:7,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Spectacles',{i:{'Gem (any)':2,'Metal (H)':1,'Glass (H)':1,'Charcoal':2},wu:25,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Coffee Table',{i:{'Wood (H)':8,'Oil':8},wu:11,size:'l',ocat:'common'});
-add('Common Items (MC)','MC Large Table',{i:{'Wood (H)':16,'Metal (O)':2,'Oil':16,'Charcoal':2},wu:21,size:'l',ocat:'common'});
-add('Common Items (MC)','MC Toy',{i:{'Wood (H)':1,'Metal (H)':1,'Oil':1,'Charcoal':1},wu:7,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Wax Seal',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s',ocat:'common'});
-add('Common Items (MC)','MC Tinderbox',{i:{'Metal (H)':1,'Fleece':1,'Rock':1,'Timber':1},wu:10,size:'s',ocat:'common'});
-
-// --- JEWELLERY STANDARD ---
-add('Jewellery (Std)','Bracelet',{i:{'@jewel':1,'Charcoal':1},wu:7,size:'s',ocat:'jewellery',jewel:true});
-add('Jewellery (Std)','Brooch',{i:{'@jewel':1,'Charcoal':1},wu:8,size:'s',ocat:'jewellery',jewel:true});
-add('Jewellery (Std)','Circlet/Torc',{i:{'@jewel':2,'Charcoal':2},wu:7,size:'s',ocat:'jewellery',jewel:true});
-add('Jewellery (Std)','Crown/Tiara',{i:{'@jewel':2,'Charcoal':2},wu:12,size:'s',ocat:'jewellery',jewel:true});
-add('Jewellery (Std)','Pendant/Necklace',{i:{'@jewel':1,'Charcoal':1},wu:10,size:'s',ocat:'jewellery',jewel:true});
-add('Jewellery (Std)','Ring/Earring',{i:{'@jewel':1,'Charcoal':1},wu:8,size:'s',ocat:'jewellery',jewel:true});
-
-// --- JEWELLERY MASTERCRAFTED ---
-add('Jewellery (MC)','MC Bracelet',{i:{'@jewel':1,'Charcoal':1},wu:12,size:'s',ocat:'jewellery',jewel:true});
-add('Jewellery (MC)','MC Brooch',{i:{'@jewel':1,'Charcoal':1},wu:14,size:'s',ocat:'jewellery',jewel:true});
-add('Jewellery (MC)','MC Circlet/Torc',{i:{'@jewel':2,'Charcoal':2},wu:12,size:'s',ocat:'jewellery',jewel:true});
-add('Jewellery (MC)','MC Crown/Tiara',{i:{'@jewel':2,'Charcoal':2},wu:21,size:'s',ocat:'jewellery',jewel:true});
-add('Jewellery (MC)','MC Pendant/Necklace',{i:{'@jewel':1,'Charcoal':1},wu:18,size:'s',ocat:'jewellery',jewel:true});
-add('Jewellery (MC)','MC Ring/Earring',{i:{'@jewel':1,'Charcoal':1},wu:14,size:'s',ocat:'jewellery',jewel:true});
-
-// --- MAGICAL TOOLS STANDARD ---
-add('Magical Tools (Std)','Candle (x3)',{i:{'Wax':1},wu:1,y:3,size:'s'});
-add('Magical Tools (Std)','Censer',{i:{'Metal (H)':1,'Charcoal':1},wu:5,size:'s'});
-add('Magical Tools (Std)','Crystal Ball',{i:{'Glass (O)':2,'Charcoal':2},wu:10,size:'s'});
-add('Magical Tools (Std)','Incense (x3)',{i:{'Herb (any)':1,'Powder':1},wu:1,y:3,size:'s'});
-add('Magical Tools (Std)','Rod',{i:{'Wood (O)':1,'Oil':1},wu:3,size:'s'});
-
-// --- MAGICAL TOOLS MASTERCRAFTED ---
-add('Magical Tools (MC)','MC Censer',{i:{'Metal (H)':2,'Charcoal':2},wu:9,size:'s'});
-add('Magical Tools (MC)','MC Crystal Ball',{i:{'Glass (H)':2,'Charcoal':2},wu:18,size:'s'});
-add('Magical Tools (MC)','MC Rod',{i:{'Wood (H)':1,'Oil':1},wu:5,size:'s'});
+// --- MAGICAL TOOLS ---
+add('Magical Tools','Censer',{i:{'Metal (H)':2,'Charcoal':1},wu:9,size:'s'});
+add('Magical Tools','Crystal Ball',{i:{'Glass (H)':2,'Charcoal':1},wu:18,size:'s'});
+add('Magical Tools','Rod',{i:{'Wood (H)':1,'Oil':1},wu:4,size:'s'});
 
 // --- INVOCATION ITEMS ---
+// Trinkets may use 1 of ANY ordinary-grade material; Metal (O) shown as representative.
 add('Magical Tools - Invocation','Trinket (x3)',{i:{'Metal (O)':1},wu:3,y:3,size:'s'});
 add('Magical Tools - Invocation','Sigil Stone',{i:{'Stone (O)':1,'Sand':1},wu:2,size:'s'});
 add('Magical Tools - Invocation','Scroll Paper',{i:{'Paper (O)':1,'Fluid':1},wu:2,size:'s'});
 add('Magical Tools - Invocation','Scroll Vellum',{i:{'Leather (H)':1,'Fluid':1},wu:3,size:'s'});
-add('Magical Tools - Invocation','Wand (Lesser)',{i:{'Wood (H)':1,'Amalgam':1,'Oil':1},wu:5,size:'s'});
+add('Magical Tools - Invocation','Wand (Lesser)',{i:{'Wood (H)':1,'Amalgam':1,'Oil':1},wu:3,size:'s'});
 add('Magical Tools - Invocation','Wand (Greater)',{i:{'Wood (H)':1,'Amalgam':2,'Oil':1},wu:9,size:'s'});
 add('Magical Tools - Invocation','Glass Sphere',{i:{'Glass (O)':1,'Charcoal':1},wu:5,size:'s'});
-add('Magical Tools - Invocation','MC Glass Sphere',{i:{'Glass (H)':1,'Charcoal':1},wu:8,size:'s'});
-add('Magical Tools - Invocation','MC Tough Glass Sphere',{i:{'Glass (H)':1,'Sand':1,'Charcoal':1},wu:12,size:'s'});
 
-// --- MECHANISMS STANDARD ---
-add('Mechanisms (Std)','Padlock',{i:{'Metal (H)':1,'Charcoal':1},wu:8,size:'s'});
-add('Mechanisms (Std)','Small Lock',{i:{'Metal (H)':1,'Charcoal':1},wu:5,size:'s'});
-add('Mechanisms (Std)','Large Lock',{i:{'Metal (H)':2,'Charcoal':2},wu:7,size:'s'});
-add('Mechanisms (Std)','Needle Trap',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:10,size:'s'});
+// --- MECHANISMS ---
+add('Mechanisms','Padlock',{i:{'Metal (H)':2,'Charcoal':1},wu:12,size:'s'});
+add('Mechanisms','Small Lock',{i:{'Metal (H)':2,'Charcoal':1},wu:10,size:'s'});
+add('Mechanisms','Large Lock',{i:{'Metal (H)':4,'Charcoal':1},wu:14,size:'s'});
+add('Mechanisms','Needle Trap',{i:{'Metal (H)':3,'Charcoal':1},wu:18,size:'s'});
 
-// --- MECHANISMS MASTERCRAFTED ---
-add('Mechanisms (MC)','MC Padlock',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s'});
-add('Mechanisms (MC)','MC Small Lock',{i:{'Metal (H)':2,'Charcoal':2},wu:9,size:'s'});
-add('Mechanisms (MC)','MC Large Lock',{i:{'Metal (H)':4,'Charcoal':4},wu:12,size:'s'});
-add('Mechanisms (MC)','MC Needle Trap',{i:{'Metal (H)':3,'Charcoal':3},wu:18,size:'s'});
-
-// --- KEYS ---
-add('Mechanisms - Keys','Additional Key',{i:{'Metal (H)':1,'Charcoal':1},wu:2,size:'s'});
-add('Mechanisms - Keys','Copy Key (Std)',{i:{'Metal (H)':1,'Charcoal':1},wu:2,size:'s'});
-add('Mechanisms - Keys','Copy Key (MC)',{i:{'Metal (H)':1,'Charcoal':1},wu:5,size:'s'});
+// --- KEYS & LOCKPICKS ---
+add('Mechanisms - Keys & Lockpicks','Additional Key',{i:{'Metal (H)':1,'Charcoal':1},wu:2,size:'s'});
+add('Mechanisms - Keys & Lockpicks','Copy Key (Std lock)',{i:{'Metal (H)':1,'Charcoal':1},wu:2,size:'s'});
+add('Mechanisms - Keys & Lockpicks','Copy Key (MC lock)',{i:{'Metal (H)':1,'Charcoal':1},wu:4,size:'s'});
+add('Mechanisms - Keys & Lockpicks','Lockpicks',{i:{'Metal (H)':2,'Wood (O)':1,'Charcoal':1,'Oil':1},wu:12,size:'s'});
 
 // --- PAPER & PRINTING ---
-add('Paper & Printing','Book (Std)',{i:{'Leather (O)':1,'Paper (O)':5,'Oil':1},wu:10,size:'s'});
-add('Paper & Printing','Book (MC)',{i:{'Leather (H)':1,'Paper (H)':5,'Oil':1},wu:20,size:'s'});
-add('Paper & Printing','Scroll Paper',{i:{'Paper (O)':1,'Fluid':1},wu:2,size:'s'});
+add('Paper & Printing','Book',{i:{'Leather (H)':1,'Paper (H)':5,'Oil':1},wu:20,size:'s'});
 add('Paper & Printing','Scroll Vellum',{i:{'Leather (H)':1,'Fluid':1},wu:3,size:'s'});
-add('Paper & Printing','Printing Press',{i:{'Wood (H)':2,'Leather (H)':1,'Metal (O)':1,'Stone (O)':1,'Oil':3,'Sand':1,'Charcoal':1},wu:12,size:'l'});
-add('Paper & Printing','Printing Plate',{i:{'Stone (H)':1,'Sand':1},wu:2,size:'s'});
 
-// --- TOOLS ---
-add('Tools (Std)','Alchemist\'s Tools',{i:{'Metal (H)':1,'Charcoal':1},wu:10,size:'s'});
-add('Tools (Std)','Artist\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:8,size:'s'});
-add('Tools (Std)','Blacksmith\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:8,size:'s'});
-add('Tools (Std)','Carpenter\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:8,size:'s'});
-add('Tools (Std)','Gemsmith\'s Tools',{i:{'Metal (H)':1,'Glass (O)':1,'Charcoal':2},wu:12,size:'s'});
-add('Tools (Std)','Glassblower\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:10,size:'s'});
-add('Tools (Std)','Goldsmith\'s Tools',{i:{'Metal (O)':1,'Glass (O)':1,'Charcoal':2},wu:10,size:'s'});
-add('Tools (Std)','Lockpicks',{i:{'Metal (H)':1,'Charcoal':1},wu:6,size:'s'});
-add('Tools (Std)','Mechanician\'s Tools',{i:{'Metal (H)':1,'Glass (O)':1,'Charcoal':2},wu:12,size:'s'});
-add('Tools (Std)','Papermaker\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:8,size:'s'});
-add('Tools (Std)','Surgeon\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:12,size:'s'});
-add('Tools (Std)','Tailor\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Charcoal':2},wu:8,size:'s'});
-add('Tools (Std)','Thief\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:8,size:'s'});
-add('Tools (Std)','Trapper\'s Tools',{i:{'Metal (H)':1,'Metal (O)':1,'Cloth (O)':1,'Charcoal':2},wu:8,size:'s'});
-
-// --- TOOLS MASTERCRAFTED ---
-add('Tools (MC)','MC Alchemist\'s Tools',{i:{'Glass (H)':2,'Metal (H)':1,'Charcoal':3},wu:18,size:'s'});
-add('Tools (MC)','MC Artist\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s'});
-add('Tools (MC)','MC Blacksmith\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s'});
-add('Tools (MC)','MC Carpenter\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s'});
-add('Tools (MC)','MC Gemsmith\'s Tools',{i:{'Metal (H)':2,'Glass (H)':1,'Charcoal':3},wu:21,size:'s'});
-add('Tools (MC)','MC Glassblower\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:18,size:'s'});
-add('Tools (MC)','MC Goldsmith\'s Tools',{i:{'Metal (H)':1,'Glass (H)':1,'Charcoal':2},wu:18,size:'s'});
-add('Tools (MC)','MC Lockpicks',{i:{'Metal (H)':1,'Metal (O)':1,'Wood (O)':1,'Charcoal':2,'Oil':1},wu:12,size:'s'});
-add('Tools (MC)','MC Mechanician\'s Tools',{i:{'Metal (H)':2,'Glass (H)':1,'Charcoal':3},wu:21,size:'s'});
-add('Tools (MC)','MC Papermaker\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s'});
-add('Tools (MC)','MC Surgeon\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:21,size:'s'});
-add('Tools (MC)','MC Tailor\'s Tools',{i:{'Metal (H)':2,'Charcoal':2},wu:14,size:'s'});
-add('Tools (MC)','MC Thief\'s Tools',{i:{'Metal (H)':4,'Charcoal':4},wu:16,size:'s'});
-add('Tools (MC)','MC Trapper\'s Tools',{i:{'Metal (H)':2,'Cloth (H)':1,'Charcoal':2},wu:14,size:'s'});
+// --- TOOLS (Creator Tools, all mastercrafted) ---
+add('Tools','Trapper\'s Tools',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:5,size:'s'});
+add('Tools','Artist\'s Tools',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:8,size:'s'});
+add('Tools','Locksmith\'s Tools',{i:{'Metal (H)':2,'Charcoal':1},wu:9,size:'s'});
+add('Tools','Armourer\'s Tools',{i:{'Metal (H)':2,'Charcoal':1},wu:10,size:'s'});
+add('Tools','Weaponsmith\'s Tools',{i:{'Metal (H)':2,'Charcoal':1},wu:10,size:'s'});
+add('Tools','Glassblower\'s Tools',{i:{'Metal (H)':2,'Charcoal':1},wu:11,size:'s'});
+add('Tools','Papermaker\'s Tools',{i:{'Wood (H)':1,'Cloth (H)':1,'Oil':1},wu:11,size:'s'});
+add('Tools','Carpenter\'s Tools',{i:{'Metal (H)':2,'Charcoal':1},wu:12,size:'s'});
+add('Tools','Ironmonger\'s Tools',{i:{'Metal (H)':2,'Charcoal':1},wu:12,size:'s'});
+add('Tools','Tailor\'s Tools',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:12,size:'s'});
+add('Tools','Goldsmith\'s Tools',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:13,size:'s'});
+add('Tools','Gemsmith\'s Tools',{i:{'Metal (H)':1,'Glass (H)':1,'Charcoal':1},wu:14,size:'s'});
+add('Tools','Tattooist\'s Tools',{i:{'Metal (H)':2,'Charcoal':1},wu:14,size:'s'});
+add('Tools','Alchemist\'s Tools',{i:{'Metal (H)':1,'Glass (H)':1,'Charcoal':1},wu:15,size:'s'});
+add('Tools','Mechanician\'s Tools',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:15,size:'s'});
+add('Tools','Surgeon\'s Tools',{i:{'Metal (H)':2,'Charcoal':1},wu:16,size:'s'});
 
 // --- WEAPONS SMALL/THROWN ---
-add('Weapons - Small','Dagger',{i:{'Metal (H)':2,'Charcoal':2},wu:7,size:'s',ocat:'weapon'});
-add('Weapons - Small','Hatchet',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:7,size:'s',ocat:'weapon'});
-add('Weapons - Small','Truncheon',{i:{'Wood (H)':2,'Oil':2},wu:7,size:'s',ocat:'weapon'});
+add('Weapons - Small','Dagger/Knife',{i:{'Metal (H)':3,'Charcoal':1},wu:7,size:'s'});
+add('Weapons - Small','Hand-axe/Hatchet',{i:{'Metal (H)':2,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:8,size:'s'});
+add('Weapons - Small','Cudgel/Truncheon',{i:{'Wood (H)':3,'Oil':1},wu:6,size:'s'});
+add('Weapons - Small','Bone Dagger',{i:{'Bone (H)':5,'Sand':2},wu:12,size:'s'});
+add('Weapons - Small','Stone Dagger',{i:{'Stone (H)':5,'Sand':2},wu:12,size:'s'});
 
 // --- WEAPONS ONE-HANDED ---
-add('Weapons - One-Handed','Axe/Mace/Short Spear',{i:{'Metal (H)':3,'Wood (H)':3,'Charcoal':3,'Oil':3},wu:11,size:'s',ocat:'weapon'});
-add('Weapons - One-Handed','Club/Stick',{i:{'Wood (H)':6,'Oil':6},wu:11,size:'s',ocat:'weapon'});
-add('Weapons - One-Handed','Sword (1H)',{i:{'Metal (H)':6,'Charcoal':6},wu:14,size:'s',ocat:'weapon'});
+add('Weapons - One-Handed','Axe/Mace/Hammer (1H)',{i:{'Metal (H)':3,'Wood (H)':3,'Charcoal':1,'Oil':1},wu:14,size:'s'});
+add('Weapons - One-Handed','Club/Sceptre/Stick (1H)',{i:{'Wood (H)':6,'Oil':2},wu:10,size:'s'});
+add('Weapons - One-Handed','Sword/Rapier (1H)',{i:{'Metal (H)':6,'Charcoal':2},wu:12,size:'s'});
+add('Weapons - One-Handed','Short Spear',{i:{'Metal (H)':3,'Wood (H)':3,'Charcoal':1,'Oil':1},wu:12,size:'s'});
 
 // --- WEAPONS TWO-HANDED ---
-add('Weapons - Two-Handed','Axe/Mace (2H)',{i:{'Metal (H)':4,'Wood (H)':4,'Charcoal':4,'Oil':4},wu:14,size:'l',ocat:'weapon'});
-add('Weapons - Two-Handed','Club/Stick (2H)',{i:{'Wood (H)':8,'Oil':8},wu:14,size:'l',ocat:'weapon'});
-add('Weapons - Two-Handed','Sword (2H)',{i:{'Metal (H)':8,'Charcoal':8},wu:20,size:'l',ocat:'weapon'});
+add('Weapons - Two-Handed','Great-axe/Maul/Warhammer',{i:{'Metal (H)':4,'Wood (H)':4,'Charcoal':1,'Oil':1},wu:20,size:'l'});
+add('Weapons - Two-Handed','Great-club/Long Stick',{i:{'Wood (H)':8,'Oil':2},wu:16,size:'l'});
+add('Weapons - Two-Handed','Longsword/Greatsword',{i:{'Metal (H)':8,'Charcoal':2},wu:18,size:'l'});
 
 // --- WEAPONS POLEARMS ---
-add('Weapons - Polearm','Spear/Pollaxe',{i:{'Metal (H)':4,'Wood (H)':4,'Charcoal':4,'Oil':4},wu:18,size:'l',ocat:'weapon'});
-add('Weapons - Polearm','Staff',{i:{'Wood (H)':6,'Oil':6},wu:18,size:'l',ocat:'weapon'});
+add('Weapons - Polearm','Spear',{i:{'Metal (H)':5,'Wood (H)':5,'Charcoal':2,'Oil':2},wu:12,size:'l'});
+add('Weapons - Polearm','Polearm/Pollaxe',{i:{'Metal (H)':4,'Wood (H)':6,'Charcoal':1,'Oil':2},wu:16,size:'l'});
+add('Weapons - Polearm','Staff',{i:{'Wood (H)':10,'Oil':3},wu:12,size:'l'});
 
 // --- WEAPONS PROJECTILE ---
-add('Weapons - Projectile','Bow',{i:{'Wood (H)':2,'Wood (O)':2,'Oil':4},wu:11,size:'s',ocat:'weapon'});
-add('Weapons - Projectile','Arrow (x3)',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:4,y:3,size:'s',ocat:'weapon'});
-add('Weapons - Projectile','Crossbow',{i:{'Wood (H)':2,'Metal (H)':2,'Charcoal':2,'Oil':2},wu:14,size:'l',ocat:'weapon'});
-add('Weapons - Projectile','Bolt (x3)',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:5,y:3,size:'s',ocat:'weapon'});
+add('Weapons - Projectile','Bow',{i:{'Wood (H)':4,'Leather (O)':2,'Oil':2},wu:12,size:'s'});
+add('Weapons - Projectile','Arrow (x3)',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:4,y:3,size:'s'});
+add('Weapons - Projectile','Crossbow',{i:{'Wood (H)':4,'Metal (H)':2,'Charcoal':1,'Oil':1},wu:16,size:'l'});
+add('Weapons - Projectile','Bolt (x3)',{i:{'Metal (H)':1,'Wood (H)':1,'Charcoal':1,'Oil':1},wu:5,y:3,size:'s'});
 
 // --- MATERIALS: PASSIVE INGREDIENTS ---
-add('Passive Ingredients','Cream',{i:{'Oil':1},wu:1,y:3,size:'s'});
-add('Passive Ingredients','Fluid',{i:{'Oil':1},wu:1,y:3,size:'s'});
+add('Passive Ingredients','Cream',{i:{'Herb (any)':1},wu:1,y:3,size:'s'});
+add('Passive Ingredients','Fluid',{i:{'Herb (any)':1},wu:1,y:3,size:'s'});
 add('Passive Ingredients','Ink',{i:{'Charcoal':1},wu:1,y:3,size:'s'});
 add('Passive Ingredients','Oil',{i:{'Herb (any)':1},wu:1,y:3,size:'s'});
 add('Passive Ingredients','Powder',{i:{'Herb (any)':1},wu:1,y:3,size:'s'});
 add('Passive Ingredients','Powdered Dye',{i:{'Herb (any)':1},wu:1,y:3,size:'s'});
 
 // --- MATERIALS: PASSIVE MATERIALS ---
-add('Passive Materials','Ash',{i:{'Timber':1},wu:1,y:3,size:'s'});
-add('Passive Materials','Charcoal',{i:{'Timber':1},wu:1,y:3,size:'s'});
+add('Passive Materials','Ash',{i:{'Wood (O)':1},wu:1,y:3,size:'s'});
+add('Passive Materials','Charcoal',{i:{'Wood (O)':1},wu:1,y:3,size:'s'});
 add('Passive Materials','Powdered Bone',{i:{'Bone (O)':1},wu:1,y:3,size:'s'});
 add('Passive Materials','Powdered Gemstone',{i:{'Gem (any)':1},wu:1,y:3,size:'s'});
 add('Passive Materials','Powdered Metal',{i:{'Metal (O)':1},wu:1,y:3,size:'s'});
@@ -612,25 +569,31 @@ add('Essences & Humours','Ichor (wasteful)',{i:{'Blood':1},wu:1,size:'s'});
 add('Essences & Humours','All 3 Humours (efficient)',{i:{'Blood':1},wu:4,y:1,size:'s'});
 
 // --- WORKSHOPS: ADEPT ---
-add('Workshops - Adept','Adept Artisan\'s Workshop',{i:{'Metal (H)':2,'Metal (O)':5,'Wood (O)':2,'Charcoal':7,'Oil':2},wu:40,size:'l'});
-add('Workshops - Adept','Adept Blacksmith\'s Forge',{i:{'Metal (H)':2,'Metal (O)':5,'Wood (O)':2,'Charcoal':7,'Oil':2},wu:40,size:'l'});
-add('Workshops - Adept','Adept Jeweller\'s Bench',{i:{'Metal (H)':2,'Metal (O)':3,'Glass (O)':2,'Wood (O)':2,'Charcoal':7,'Oil':2},wu:40,size:'l'});
-add('Workshops - Adept','Adept Alchemist\'s Laboratory',{i:{'Metal (H)':2,'Glass (H)':4,'Wood (O)':2,'Charcoal':6,'Oil':2},wu:40,size:'l'});
-add('Workshops - Adept','Adept Surgeon\'s Bed',{i:{'Metal (H)':1,'Metal (O)':3,'Cloth (O)':3,'Wood (O)':2,'Charcoal':4,'Oil':2},wu:40,size:'l'});
+add('Workshops - Adept','Adept Alchemist\'s Laboratory',{i:{'Wood (O)':2,'Metal (H)':2,'Charcoal':2,'Oil':1,'Glass (O)':4},wu:40,size:'l'});
+add('Workshops - Adept','Adept Artisan\'s Workshop',{i:{'Wood (O)':4,'Metal (H)':2,'Metal (O)':2,'Charcoal':1,'Oil':1},wu:40,size:'l'});
+add('Workshops - Adept','Adept Blacksmith\'s Forge',{i:{'Wood (O)':2,'Metal (H)':2,'Metal (O)':4,'Charcoal':2,'Oil':1},wu:40,size:'l'});
+add('Workshops - Adept','Adept Jeweller\'s Bench',{i:{'Wood (O)':2,'Metal (H)':2,'Metal (O)':2,'Glass (O)':2,'Charcoal':2,'Oil':1},wu:40,size:'l'});
+add('Workshops - Adept','Adept Surgeon\'s Bed',{i:{'Wood (O)':2,'Cloth (O)':4,'Metal (H)':2,'Charcoal':1,'Oil':1},wu:40,size:'l'});
 
 // --- WORKSHOPS: UPGRADES (Adept -> Expert) ---
-add('Workshops - Upgrades','Upgrade to Expert Artisan\'s Workshop',{i:{'Adept Artisan\'s Workshop':1,'Metal (H)':7,'Wood (O)':1,'Charcoal':7,'Oil':1},wu:40,size:'l'});
-add('Workshops - Upgrades','Upgrade to Expert Blacksmith\'s Forge',{i:{'Adept Blacksmith\'s Forge':1,'Metal (H)':7,'Wood (O)':1,'Charcoal':7,'Oil':1},wu:40,size:'l'});
-add('Workshops - Upgrades','Upgrade to Expert Jeweller\'s Bench',{i:{'Adept Jeweller\'s Bench':1,'Metal (H)':4,'Glass (H)':2,'Glass (O)':2,'Wood (O)':1,'Charcoal':8,'Oil':1},wu:40,size:'l'});
-add('Workshops - Upgrades','Upgrade to Expert Alchemist\'s Laboratory',{i:{'Adept Alchemist\'s Laboratory':1,'Glass (H)':3,'Metal (H)':1,'Wood (O)':1,'Charcoal':4,'Oil':1},wu:40,size:'l'});
-add('Workshops - Upgrades','Upgrade to Expert Surgeon\'s Bed',{i:{'Adept Surgeon\'s Bed':1,'Metal (H)':5,'Cloth (O)':1,'Wood (O)':1,'Charcoal':5,'Oil':1},wu:40,size:'l'});
+add('Workshops - Upgrades','Upgrade to Expert Alchemist\'s Laboratory',{i:{'Adept Alchemist\'s Laboratory':1,'Metal (H)':1,'Wood (O)':2,'Glass (H)':4,'Charcoal':2,'Oil':1},wu:40,size:'l'});
+add('Workshops - Upgrades','Upgrade to Expert Artisan\'s Workshop',{i:{'Adept Artisan\'s Workshop':1,'Metal (H)':2,'Charcoal':1,'Oil':2,'Wood (H)':3,'Leather (O)':2},wu:40,size:'l'});
+add('Workshops - Upgrades','Upgrade to Expert Blacksmith\'s Forge',{i:{'Adept Blacksmith\'s Forge':1,'Metal (H)':4,'Charcoal':1,'Oil':1,'Wood (H)':1,'Leather (O)':2},wu:40,size:'l'});
+add('Workshops - Upgrades','Upgrade to Expert Jeweller\'s Bench',{i:{'Adept Jeweller\'s Bench':1,'Metal (H)':4,'Wood (O)':2,'Glass (H)':1,'Charcoal':2,'Oil':1},wu:40,size:'l'});
+add('Workshops - Upgrades','Upgrade to Expert Surgeon\'s Bed',{i:{'Adept Surgeon\'s Bed':1,'Metal (H)':2,'Wood (O)':2,'Charcoal':1,'Oil':1,'Cloth (H)':3},wu:40,size:'l'});
 
 // --- WORKSHOPS: EXPERT ---
-add('Workshops - Expert','Expert Artisan\'s Workshop',{i:{'Metal (H)':9,'Wood (O)':2,'Charcoal':9,'Oil':2},wu:70,size:'l'});
-add('Workshops - Expert','Expert Blacksmith\'s Forge',{i:{'Metal (H)':9,'Wood (O)':2,'Charcoal':9,'Oil':2},wu:70,size:'l'});
-add('Workshops - Expert','Expert Jeweller\'s Bench',{i:{'Metal (H)':6,'Glass (H)':2,'Glass (O)':3,'Wood (O)':2,'Charcoal':11,'Oil':2},wu:70,size:'l'});
-add('Workshops - Expert','Expert Alchemist\'s Laboratory',{i:{'Metal (H)':3,'Glass (H)':6,'Wood (O)':2,'Charcoal':9,'Oil':2},wu:70,size:'l'});
-add('Workshops - Expert','Expert Surgeon\'s Bed',{i:{'Metal (H)':6,'Cloth (O)':3,'Wood (O)':2,'Charcoal':6,'Oil':2},wu:70,size:'l'});
+add('Workshops - Expert','Expert Alchemist\'s Laboratory',{i:{'Wood (O)':2,'Metal (H)':2,'Glass (H)':6,'Charcoal':2,'Oil':1},wu:70,size:'l'});
+add('Workshops - Expert','Expert Artisan\'s Workshop',{i:{'Metal (H)':4,'Charcoal':1,'Oil':2,'Wood (H)':4,'Leather (O)':2},wu:70,size:'l'});
+add('Workshops - Expert','Expert Blacksmith\'s Forge',{i:{'Metal (H)':6,'Charcoal':2,'Oil':1,'Wood (H)':2,'Leather (O)':2},wu:70,size:'l'});
+add('Workshops - Expert','Expert Jeweller\'s Bench',{i:{'Wood (O)':2,'Metal (H)':6,'Glass (H)':2,'Charcoal':2,'Oil':1},wu:70,size:'l'});
+add('Workshops - Expert','Expert Surgeon\'s Bed',{i:{'Wood (O)':2,'Metal (H)':4,'Charcoal':1,'Oil':1,'Cloth (H)':4},wu:70,size:'l'});
+
+// --- REPAIR KITS (alternative materials allowed; representative shown) ---
+add('Repair Kits','Blacksmith\'s Repair Kit',{i:{'Metal (O)':1},wu:3,size:'s'});
+add('Repair Kits','Jeweller\'s Repair Kit',{i:{'Glass (O)':1},wu:3,size:'s'});
+add('Repair Kits','Artisan\'s Repair Kit',{i:{'Wood (O)':1},wu:3,size:'s'});
+add('Repair Kits','Care Kit (x2)',{i:{'Researched Material':1},wu:10,y:2,size:'s'});
 
 // --- ALCHEMY: POTIONS (ENHANCING) ---
 add('Potions - Enhancing','Berserkergang',{i:{'Cumin Seeds':1,'Moonflower Seeds':1,'Oil':3},wu:4,size:'s'});
@@ -702,41 +665,22 @@ add('Surgery - Grafts','Transplant Organ',{i:{'Blood':1,'Body Part':1},wu:5,size
 add('Surgery - Tattoos','Mundane Tattoo',{i:{'Ink':1},wu:1,size:'s'});
 
 // ============================================================
-//  ORNATE FINISH DEFINITIONS
+//  ORNATING PROCESSES (unified across all item types, wiki 31 May 2026)
+//  WU increase is calculated from the item's base WU. Processes can be
+//  stacked in the rules; the calculator applies one at a time.
+//  Sequinned accepts Lead, Nickel or Tin ingots (Lead shown).
 // ============================================================
-const ORNATE_DEFS = {
-  armour: [
-    {name:'Engraved', i:{}, wuMult:1.5},
-    {name:'Dyed/Embroidered', i:{'Powdered Dye':3}, wuMult:1.5},
-    {name:'Brigandine Plate', i:{'Cloth (H)':3,'Powdered Dye':3}, wuMult:1.5},
-    {name:'Gilded/Inlaid', i:{'@jewel':1,'Charcoal':1}, wuMult:1.5, jewel:true},
-    {name:'Glass', i:{'Glass (H)':2}, wuMult:1.5},
-    {name:'Gems', i:{'Gem (any)':2}, wuMult:1.5},
-  ],
-  clothing: [
-    {name:'Dyed/Embroidered', i:{'Powdered Dye':3}, wuMult:1.5},
-    {name:'Glass', i:{'Glass (H)':2}, wuMult:1.5},
-    {name:'Gems', i:{'Gem (any)':2}, wuMult:1.5},
-    {name:'Metal Thread', i:{'@jewel':1,'Charcoal':1}, wuMult:1.5, jewel:true},
-  ],
-  common: [
-    {name:'Engraved', i:{}, wuMult:1.5},
-    {name:'Gilded/Inlaid', i:{'@jewel':1,'Charcoal':1}, wuMult:1.5, jewel:true},
-    {name:'Glass', i:{'Glass (H)':1}, wuMult:1.5},
-    {name:'Gems', i:{'Gem (any)':3}, wuMult:1.5},
-  ],
-  jewellery: [
-    {name:'Engraved', i:{}, wuMult:1.5},
-    {name:'Glass', i:{'Glass (H)':1}, wuMult:1.5},
-    {name:'Gem', i:{'Gem (any)':1}, wuMult:1.5},
-  ],
-  weapon: [
-    {name:'Engraved', i:{}, wuMult:1.5},
-    {name:'Gilded/Inlaid', i:{'@jewel':1,'Charcoal':1}, wuMult:1.5, jewel:true},
-    {name:'Glass', i:{'Glass (H)':1}, wuMult:1.5},
-    {name:'Gems', i:{'Gem (any)':3}, wuMult:1.5},
-  ],
-};
+const ORNATE_PROCS = [
+  {name:'Coloured (+50% WU)', i:{'Powdered Dye':3}, wuAdd:0.5},
+  {name:'Embroidered (+100% WU)', i:{}, wuAdd:1},
+  {name:'Lustering/Shimmering (+50% WU)', i:{'Platinum Ingot':1}, wuAdd:0.5},
+  {name:'Rhinestoned (+50% WU)', i:{'Glass (H)':2}, wuAdd:0.5},
+  {name:'Gem-Encrusted (+50% WU)', i:{'Gem (any)':2}, wuAdd:0.5},
+  {name:'Sequinned (+50% WU)', i:{'Lead Metal':2}, wuAdd:0.5},
+  {name:'Ornate (+100% WU)', i:{}, wuAdd:1},
+  {name:'Gaudy (+50% WU)', i:{'@jewel':2}, wuAdd:0.5, jewel:true},
+  {name:'Engraved (+100% WU)', i:{}, wuAdd:1},
+];
 
 // ============================================================
 //  TYPE -> CATEGORY MAPPING
@@ -752,27 +696,28 @@ const TYPES = {
     'Armour - Shields','Armour - Misc'
   ],
   'Clothing': [
-    'Clothing - Small (Std)','Clothing - Small (MC)',
-    'Clothing - Large (Std)','Clothing - Large (MC)'
+    'Clothing - Footwear','Clothing - Bracers & Gloves','Clothing - Hats',
+    'Clothing - Masks & Headbands','Clothing - Shirts & Sashes',
+    'Clothing - Cloaks & Tabards','Clothing - Dresses & Robes',
+    'Clothing - Trousers & Belts','Clothing - Kilts'
   ],
   'Common Items': [
-    'Common Items (Std)','Common Items (MC)'
+    'Common Items'
   ],
   'Jewellery': [
-    'Jewellery (Std)','Jewellery (MC)'
+    'Jewellery - Metal','Jewellery - Wood','Jewellery - Bone'
   ],
   'Magical Tools': [
-    'Magical Tools (Std)','Magical Tools (MC)',
-    'Magical Tools - Invocation'
+    'Magical Tools','Magical Tools - Invocation'
   ],
   'Mechanisms': [
-    'Mechanisms (Std)','Mechanisms (MC)','Mechanisms - Keys'
+    'Mechanisms','Mechanisms - Keys & Lockpicks'
   ],
   'Paper & Printing': [
     'Paper & Printing'
   ],
   'Tools': [
-    'Tools (Std)','Tools (MC)'
+    'Tools'
   ],
   'Weapons': [
     'Weapons - Small','Weapons - One-Handed','Weapons - Two-Handed',
@@ -788,7 +733,21 @@ const TYPES = {
   'Workshops': [
     'Workshops - Adept','Workshops - Expert','Workshops - Upgrades'
   ],
+  'Repair & Maintenance': [
+    'Repair Kits'
+  ],
 };
+
+// Categories whose recipes are Mastercrafted by default and may be made
+// Standard (half WU rounded up, (H) -> (O) materials) per Crafting Designs.
+const STD_CATS = new Set([
+  ...TYPES['Armour'], ...TYPES['Clothing'], ...TYPES['Common Items'],
+  ...TYPES['Jewellery'], ...TYPES['Magical Tools'], ...TYPES['Mechanisms'],
+  ...TYPES['Paper & Printing'], ...TYPES['Tools'], ...TYPES['Weapons'],
+]);
+// Any mastercrafted item can be ornated (workshops included per the wiki's
+// worked example).
+const ORNATE_CATS = new Set([...STD_CATS, ...TYPES['Workshops']]);
 
 // ============================================================
 //  UI LOGIC
@@ -798,6 +757,7 @@ const selCat = document.getElementById('selCategory');
 const selItem = document.getElementById('selItem');
 const numQty = document.getElementById('numQty');
 const lblQty = document.getElementById('lblQty');
+const chkStd = document.getElementById('chkStd');
 const chkOrnate = document.getElementById('chkOrnate');
 const selOrnate = document.getElementById('selOrnate');
 const grpOrnate = document.getElementById('grpOrnate');
@@ -860,8 +820,13 @@ function updateUI() {
   // Show/hide location label
   lblQty.textContent = design.size === 'loc' ? 'Locations' : 'Quantity';
 
-  // Ornate availability
-  const hasOrnate = !!design.ocat && !!ORNATE_DEFS[design.ocat];
+  // Standard quality availability (Crafting Designs items only)
+  const hasStd = STD_CATS.has(selCat.value);
+  chkStd.parentElement.style.display = hasStd ? '' : 'none';
+  if(!hasStd) chkStd.checked = false;
+
+  // Ornate availability (mastercrafted items only)
+  const hasOrnate = ORNATE_CATS.has(selCat.value) && !chkStd.checked;
   chkOrnate.parentElement.style.display = hasOrnate ? '' : 'none';
   if(!hasOrnate) chkOrnate.checked = false;
   updateOrnateOptions();
@@ -874,15 +839,14 @@ function updateUI() {
 
 function updateOrnateOptions() {
   const design = getSelectedDesign();
-  if(!design || !chkOrnate.checked || !design.ocat) {
+  if(!design || !chkOrnate.checked || !ORNATE_CATS.has(selCat.value)) {
     grpOrnate.style.display = 'none';
     grpOrnateVariant.style.display = 'none';
     return;
   }
-  const defs = ORNATE_DEFS[design.ocat] || [];
   grpOrnate.style.display = '';
   selOrnate.innerHTML = '';
-  defs.forEach((d,i) => {
+  ORNATE_PROCS.forEach((d,i) => {
     const o = document.createElement('option');
     o.value = i; o.textContent = d.name;
     selOrnate.appendChild(o);
@@ -893,9 +857,8 @@ function updateOrnateOptions() {
 function updateJewelVisibility() {
   const design = getSelectedDesign();
   let needsJewel = design && design.jewel;
-  if(chkOrnate.checked && design && design.ocat) {
-    const defs = ORNATE_DEFS[design.ocat] || [];
-    const orn = defs[selOrnate.value];
+  if(chkOrnate.checked && ORNATE_CATS.has(selCat.value)) {
+    const orn = ORNATE_PROCS[selOrnate.value];
     if(orn && orn.jewel) needsJewel = true;
   }
   grpJewel.style.display = needsJewel ? '' : 'none';
@@ -905,6 +868,7 @@ selType.addEventListener('change', () => { ownedItems.clear(); populateCategorie
 selCat.addEventListener('change', () => { ownedItems.clear(); populateItems(); });
 selItem.addEventListener('change', () => { ownedItems.clear(); updateUI(); });
 numQty.addEventListener('input', rebuildTree);
+chkStd.addEventListener('change', () => { updateUI(); });
 chkOrnate.addEventListener('change', () => { updateOrnateOptions(); updateJewelVisibility(); rebuildTree(); });
 selOrnate.addEventListener('change', () => { updateJewelVisibility(); rebuildTree(); });
 selJewel.addEventListener('change', rebuildTree);
@@ -1050,8 +1014,20 @@ function buildDesignTree() {
   const produced = batches * itemYield;
   const surplus = produced - qty;
 
+  // Standard quality: half WU (rounded up), all (H) materials become (O)
+  const isStd = chkStd.checked && STD_CATS.has(selCat.value);
+  let baseInputs = design.i;
+  if(isStd) {
+    baseInputs = {};
+    for(const [k,v] of Object.entries(design.i)) {
+      const key = k.replace(' (H)', ' (O)');
+      baseInputs[key] = (baseInputs[key]||0) + v;
+    }
+  }
+  const designWu = isStd ? Math.ceil(design.wu / 2) : design.wu;
+
   // Resolve inputs with jewellery metal substitution
-  let inputs = resolveJewel(design.i);
+  let inputs = resolveJewel(baseInputs);
 
   // Scale by batches (and by locations for armour)
   // For per-loc items, qty IS the number of locations
@@ -1065,30 +1041,23 @@ function buildDesignTree() {
     scaledInputs['Leather (O)'] = (scaledInputs['Leather (O)']||0) + 1;
   }
 
-  // Ornate additions
+  // Ornating process (mastercrafted items only; WU increase from base WU)
   let ornateWuExtra = 0;
-  if(chkOrnate.checked && design.ocat) {
-    const defs = ORNATE_DEFS[design.ocat] || [];
-    const orn = defs[selOrnate.value];
+  if(chkOrnate.checked && !isStd && ORNATE_CATS.has(selCat.value)) {
+    const orn = ORNATE_PROCS[selOrnate.value];
     if(orn) {
-      // WU multiplier applies to the base assembly WU
-      const baseWu = design.wu * batches;
-      ornateWuExtra = Math.ceil(baseWu * (orn.wuMult - 1));
+      const baseWu = designWu * batches;
+      ornateWuExtra = Math.ceil(baseWu * orn.wuAdd);
 
-      // Ornate materials: per location for armour, per item otherwise
-      // Large items double ornate materials for clothing/common/weapon
-      let ornScale = batches;
-      if(design.size === 'l' && (design.ocat === 'clothing' || design.ocat === 'common' || design.ocat === 'weapon')) {
-        ornScale = batches * 2;
-      }
+      // Ornate materials: per item (per location for armour)
       const ornInputs = resolveJewel(orn.i);
       for(const [k,v] of Object.entries(ornInputs)) {
-        scaledInputs[k] = (scaledInputs[k]||0) + v * ornScale;
+        scaledInputs[k] = (scaledInputs[k]||0) + v * batches;
       }
     }
   }
 
-  const assemblyWu = design.wu * batches + ornateWuExtra;
+  const assemblyWu = designWu * batches + ornateWuExtra;
 
   // Build children trees for each input
   const children = [];
